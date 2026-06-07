@@ -70,18 +70,18 @@ export function Playlist() {
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl"
       style={{
-        borderColor: "var(--color-outline-variant)",
-        backgroundColor: "var(--color-surface-container-low)",
+        backgroundColor: "var(--color-surface-dim)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)",
       }}
     >
       {/* Header */}
       <div
         className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2"
         style={{
-          borderColor: "var(--color-outline-variant)",
-          backgroundColor: "var(--color-surface-container-lowest)",
+          borderColor: "var(--color-outline-dim)",
+          backgroundColor: "color-mix(in srgb, var(--color-surface-raised) 60%, transparent)",
         }}
       >
         <div className="flex items-baseline gap-2">
@@ -98,9 +98,9 @@ export function Playlist() {
         <button
           type="button"
           onClick={load}
-          className="flex h-6 w-6 items-center justify-center rounded-sm border transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]"
+          className="flex h-6 w-6 items-center justify-center rounded-full border transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]"
           style={{
-            borderColor: "var(--color-outline-variant)",
+            borderColor: "var(--color-outline-dim)",
             color: "var(--color-outline)",
           }}
           aria-label={t("refresh")}
@@ -128,11 +128,11 @@ export function Playlist() {
           placeholder={t("filter")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="w-full rounded-sm border px-3 py-1.5 text-[13px] outline-none transition-colors focus:ring-1 focus:ring-[color:var(--color-primary)]"
+          className="w-full rounded-full border px-3 py-1.5 text-[13px] outline-none transition-colors focus:ring-1 focus:ring-[color:var(--color-primary)]"
           style={{
             fontFamily: "var(--font-body)",
-            borderColor: "var(--color-outline-variant)",
-            backgroundColor: "var(--color-surface-container-high)",
+            borderColor: "var(--color-outline-dim)",
+            backgroundColor: "var(--color-surface-raised)",
             color: "var(--color-on-surface)",
           }}
         />
@@ -143,8 +143,8 @@ export function Playlist() {
         {allTracks.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 p-6">
             <p
-              className="text-center text-xs uppercase tracking-[0.14em] opacity-50"
-              style={{ fontFamily: "var(--font-headline)" }}
+              className="text-center text-xs font-medium tracking-[var(--tracking-label)] opacity-50"
+              style={{ fontFamily: "var(--font-body)" }}
             >
               {localTracks === null && state.playlist.length === 0
                 ? t("loading")
@@ -153,11 +153,11 @@ export function Playlist() {
             <button
               type="button"
               onClick={load}
-              className="rounded-sm border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]"
+              className="rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-[var(--tracking-label)] transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]"
               style={{
-                borderColor: "var(--color-outline-variant)",
+                borderColor: "var(--color-outline-dim)",
                 color: "var(--color-outline)",
-                fontFamily: "var(--font-headline)",
+                fontFamily: "var(--font-body)",
               }}
             >
               {t("scanLocal")}
@@ -178,20 +178,17 @@ export function Playlist() {
                     playTrack(tr);
                   }
                 }}
-                className="flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors rounded-sm"
+                className="flex cursor-pointer items-center gap-2 px-3 py-2 rounded-lg transition-colors"
                 style={{
-                  borderBottom: "1px solid var(--color-outline-variant)",
+                  borderBottom: "1px solid var(--color-outline-dim)",
                   backgroundColor: active
-                    ? "color-mix(in srgb, var(--color-primary) 8%, transparent)"
+                    ? "color-mix(in srgb, var(--color-primary) 12%, transparent)"
                     : "transparent",
-                  borderLeft: active
-                    ? "2px solid var(--color-primary)"
-                    : "2px solid transparent",
                   fontFamily: "var(--font-body)",
                   color: "var(--color-on-surface)",
                 }}
                 onMouseEnter={(e) => {
-                  if (!active) e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--color-surface-container-high) 40%, transparent)";
+                  if (!active) e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--color-primary) 4%, transparent)";
                 }}
                 onMouseLeave={(e) => {
                   if (!active) e.currentTarget.style.backgroundColor = "transparent";
@@ -222,9 +219,9 @@ export function Playlist() {
                     e.stopPropagation();
                     removeTrack(tr.id);
                   }}
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors hover:border-red-500 hover:text-red-500"
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors hover:border-[color:var(--color-error)] hover:text-[color:var(--color-error)]"
                   style={{
-                    borderColor: "var(--color-outline-variant)",
+                    borderColor: "var(--color-outline-dim)",
                     color: "var(--color-outline)",
                     opacity: active ? 0.6 : 0,
                   }}

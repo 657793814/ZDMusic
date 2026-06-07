@@ -14,10 +14,10 @@ export function ModeSwitch() {
 
   return (
     <div
-      className="flex overflow-hidden rounded-md border"
+      className="flex rounded-full overflow-hidden"
       style={{
-        borderColor: "var(--color-outline-variant)",
-        fontFamily: "var(--font-headline)",
+        border: "1px solid var(--color-outline-dim)",
+        fontFamily: "var(--font-body)",
       }}
     >
       {MODES.map(({ key, label }) => {
@@ -26,13 +26,13 @@ export function ModeSwitch() {
           <button
             key={key}
             onClick={() => setMode(key)}
-            className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] transition-colors"
+            className="px-3.5 py-1 text-[11px] font-medium tracking-[var(--tracking-label)] transition-all duration-150 rounded-full"
             style={{
               backgroundColor: active
-                ? "color-mix(in srgb, var(--color-primary) 18%, transparent)"
+                ? "var(--color-primary)"
                 : "transparent",
               color: active
-                ? "var(--color-primary)"
+                ? "var(--color-on-primary)"
                 : "var(--color-outline)",
             }}
           >

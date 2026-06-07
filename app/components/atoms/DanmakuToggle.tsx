@@ -14,18 +14,16 @@ export function DanmakuToggle() {
         onClick={toggleDanmaku}
         disabled={!canToggle}
         title={canToggle ? undefined : t("danmakuUnavailable")}
-        className="rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+        className="rounded-full px-2.5 py-1 text-[10px] font-medium tracking-[var(--tracking-label)] transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30"
         style={{
-          fontFamily: "var(--font-headline), 'Space Grotesk', sans-serif",
-          borderColor: enabled
-            ? "var(--color-primary)"
-            : hasDanmaku
-              ? "var(--color-outline-variant)"
-              : "var(--color-outline)",
-          color: enabled ? "var(--color-primary)" : hasDanmaku ? "var(--color-outline)" : "var(--color-outline-variant)",
-          boxShadow: enabled
-            ? "0 0 8px rgba(111, 238, 225, 0.25)"
-            : "none",
+          fontFamily: "var(--font-body)",
+          backgroundColor: enabled
+            ? "color-mix(in srgb, var(--color-primary) 15%, transparent)"
+            : "transparent",
+          color: enabled ? "var(--color-primary)" : "var(--color-outline)",
+          border: enabled
+            ? `1px solid var(--color-primary)`
+            : "1px solid transparent",
         }}
       >
         {t("danmaku")}

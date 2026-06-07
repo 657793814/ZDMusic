@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { Track } from "@/app/lib/types";
 import type { ChatMessage as ChatMessageModel } from "@/app/lib/types";
@@ -90,7 +89,6 @@ function parseContent(content: string): ContentPart[] {
       const tag = detectTag(match[0]);
       parts.push({ type: tag, tracks });
     } else {
-      // fenced block found but JSON parsing failed — render the captured content as text
       parts.push({ type: "text", text: match[1] });
     }
     last = match.index + match[0].length;
@@ -131,16 +129,16 @@ function AddedCards({ tracks }: { tracks: TrackExt[] }) {
 
   return (
     <div
-      className="my-2 overflow-hidden rounded-sm border"
-      style={{ borderColor: "var(--color-outline-variant)" }}
+      className="my-2 overflow-hidden rounded-xl border"
+      style={{ borderColor: "var(--color-outline-dim)" }}
     >
       <div
         className="px-3 py-2"
-        style={{ backgroundColor: "var(--color-surface-container)" }}
+        style={{ backgroundColor: "var(--color-surface-raised)" }}
       >
         <span
-          className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-          style={{ fontFamily: "var(--font-headline)", color: "var(--color-primary)" }}
+          className="text-[11px] font-semibold tracking-[var(--tracking-label)]"
+          style={{ fontFamily: "var(--font-body)", color: "var(--color-primary)" }}
         >
           [{tracks.length} {t("tracksAdded")}]
         </span>
@@ -150,7 +148,7 @@ function AddedCards({ tracks }: { tracks: TrackExt[] }) {
           <div
             key={tr.id || i}
             className="flex items-center gap-2 border-t px-3 py-2"
-            style={{ borderColor: "var(--color-outline-variant)" }}
+            style={{ borderColor: "var(--color-outline-dim)" }}
           >
             <div className="min-w-0 flex-1">
               <p
@@ -165,14 +163,14 @@ function AddedCards({ tracks }: { tracks: TrackExt[] }) {
               </p>
             </div>
             <span
-              className="shrink-0 rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] opacity-50"
+              className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-[var(--tracking-label)] opacity-50"
               style={{
-                fontFamily: "var(--font-headline)",
-                borderColor: "var(--color-outline-variant)",
+                fontFamily: "var(--font-body)",
+                borderColor: "var(--color-outline-dim)",
                 color: "var(--color-outline)",
               }}
             >
-              ADDED
+              {t("added")}
             </span>
           </div>
         ))}
@@ -198,13 +196,6 @@ function getButtonState(
   }
   return "add";
 }
-
-const BTN_CONFIG: Record<ButtonState, { labelKey: string; disabled: boolean }> = {
-  add: { labelKey: "+ ADD", disabled: false },
-  queued: { labelKey: "queued", disabled: true },
-  converting: { labelKey: "converting", disabled: true },
-  added: { labelKey: "added", disabled: true },
-};
 
 function TrackCards({ tracks }: { tracks: TrackExt[] }) {
   const { state, addTracks } = usePlayer();
@@ -245,25 +236,25 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
 
   return (
     <div
-      className="my-2 overflow-hidden rounded-sm border"
-      style={{ borderColor: "var(--color-outline-variant)" }}
+      className="my-2 overflow-hidden rounded-xl border"
+      style={{ borderColor: "var(--color-outline-dim)" }}
     >
       <div
         className="flex items-center justify-between gap-2 px-3 py-2"
-        style={{ backgroundColor: "var(--color-surface-container)" }}
+        style={{ backgroundColor: "var(--color-surface-raised)" }}
       >
         <span
-          className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-          style={{ fontFamily: "var(--font-headline)", color: "var(--color-outline)" }}
+          className="text-[11px] font-semibold tracking-[var(--tracking-label)]"
+          style={{ fontFamily: "var(--font-body)", color: "var(--color-outline)" }}
         >
-          [{tracks.length} TRACKS]
+          [{tracks.length} tracks]
         </span>
         <button
           onClick={handleAddAll}
           disabled={allDone}
-          className="rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-opacity disabled:opacity-40"
+          className="rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[var(--tracking-label)] transition-opacity disabled:opacity-40"
           style={{
-            fontFamily: "var(--font-headline)",
+            fontFamily: "var(--font-body)",
             borderColor: "var(--color-primary)",
             color: "var(--color-primary)",
           }}
@@ -275,12 +266,12 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
         {tracks.map((tr) => {
           const btnState = getButtonState(tr, inPlaylist, convertQueue, convertingSet, convertedSet);
           const cfg = BTN_CONFIG[btnState];
-          const label = cfg.labelKey === "+ ADD" ? cfg.labelKey : t(cfg.labelKey as DictKey);
+          const label = cfg.labelKey === "Add" ? cfg.labelKey : t(cfg.labelKey as DictKey);
           return (
             <div
               key={tr.bvid || tr.id}
               className="flex items-center gap-2 border-t px-3 py-2"
-              style={{ borderColor: "var(--color-outline-variant)" }}
+              style={{ borderColor: "var(--color-outline-dim)" }}
             >
               <div className="min-w-0 flex-1">
                 <p className="m-0 truncate text-sm" style={{ fontFamily: "var(--font-body)" }}>
@@ -307,10 +298,10 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
               <button
                 onClick={() => handleAdd(tr)}
                 disabled={cfg.disabled}
-                className="shrink-0 rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-opacity disabled:opacity-40"
+                className="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[var(--tracking-label)] transition-opacity disabled:opacity-40"
                 style={{
-                  fontFamily: "var(--font-headline)",
-                  borderColor: cfg.disabled ? "var(--color-outline-variant)" : "var(--color-primary)",
+                  fontFamily: "var(--font-body)",
+                  borderColor: cfg.disabled ? "var(--color-outline-dim)" : "var(--color-primary)",
                   color: cfg.disabled ? "var(--color-outline)" : "var(--color-primary)",
                 }}
               >
@@ -323,6 +314,13 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
     </div>
   );
 }
+
+const BTN_CONFIG: Record<ButtonState, { labelKey: string; disabled: boolean }> = {
+  add: { labelKey: "Add", disabled: false },
+  queued: { labelKey: "queued", disabled: true },
+  converting: { labelKey: "converting", disabled: true },
+  added: { labelKey: "added", disabled: true },
+};
 
 function labelFor(role: ChatMessageModel["role"], t: (key: DictKey) => string) {
   if (role === "agent") return t("agentLabel");
@@ -355,23 +353,24 @@ function ToolMessage({ message: m }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex max-w-[min(100%,38rem)] cursor-pointer items-start gap-1.5 border-l-[3px] border-transparent py-1 pl-4 pr-4 text-left transition-opacity hover:opacity-90"
+        className="flex max-w-[min(100%,38rem)] cursor-pointer items-start gap-1.5 border-l-[3px] border-transparent py-1 pl-4 pr-4 text-left rounded-r-lg transition-opacity hover:opacity-90"
         style={{
           borderLeftColor: "var(--color-secondary)",
           opacity: open ? 0.8 : 0.5,
+          backgroundColor: open ? "color-mix(in srgb, var(--color-secondary) 4%, transparent)" : "transparent",
         }}
       >
         <span
           className="mt-px shrink-0 text-[10px]"
           style={{ color: "var(--color-outline)" }}
         >
-          {open ? "\u25BE" : "\u25B8"}
+          {open ? "▾" : "▸"}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline min-w-0">
             <span
-              className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em]"
-              style={{ fontFamily: "var(--font-headline)", color: "var(--color-secondary)" }}
+              className="shrink-0 text-[10px] font-medium tracking-[var(--tracking-label)]"
+              style={{ fontFamily: "var(--font-body)", color: "var(--color-secondary)" }}
             >
               [{toolLabel}]
             </span>
@@ -407,34 +406,24 @@ export function ChatMessage({ message: m }: Props) {
 
   const bgAgent = m.role === "agent";
 
-  const edge =
-    m.role === "system"
-      ? "var(--color-error)"
-      : "var(--color-outline-variant)";
-
-  const borderStyle: CSSProperties = isOp
-    ? { borderRightColor: edge }
-    : { borderLeftColor: edge };
-
   const parts = m.role === "agent" ? parseContent(m.content) : null;
 
   return (
     <article className={`mb-6 flex w-full ${isOp ? "justify-end" : "justify-start"}`}>
       <div
         className={
-          `max-w-[min(100%,38rem)] pl-4 pr-4 pt-3 pb-3 ` +
-          (isOp ? "border-r-[3px] border-transparent border-l-transparent" : "border-l-[3px] border-transparent border-r-transparent") +
-          ` ` +
-          (bgAgent ? "bg-[color:var(--color-surface-container-high)]" : "")
+          `max-w-[min(100%,38rem)] rounded-xl ` +
+          (isOp ? "pr-4 pt-3 pb-3 " : "pl-4 pr-4 pt-3 pb-3") +
+          (bgAgent ? "bg-[color:var(--color-surface-raised)]" : "")
         }
-        style={borderStyle}
+        style={isOp && bgAgent ? { border: "1px solid var(--color-outline-dim)" } : undefined}
       >
         <div
           className={`mb-3 flex flex-wrap items-baseline gap-2 opacity-92 ${isOp ? "justify-end" : ""}`}
         >
           <span
-            className="terminal-label"
-            style={{ fontFamily: "var(--font-headline)", letterSpacing: "var(--tracking-label)" }}
+            className="text-[10px] font-medium tracking-[var(--tracking-label)]"
+            style={{ fontFamily: "var(--font-body)", color: isOp ? "var(--color-primary)" : "var(--color-outline)" }}
           >
             {label}
           </span>

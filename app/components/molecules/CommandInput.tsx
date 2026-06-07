@@ -52,12 +52,20 @@ export function CommandInput({
   };
 
   return (
-    <div className="w-full pb-1" style={{ borderBottom: "1px solid var(--color-outline-variant)" }}>
-      <div className="flex items-start gap-2">
-        <span className="shrink-0 select-none py-2 text-[color:var(--color-primary)]" aria-hidden>
-          ▸
+    <div className="w-full">
+      <div className="flex items-center gap-2 rounded-full border bg-[var(--color-surface-raised)] px-4 py-2.5 transition-colors focus-within:border-[color:var(--color-primary)]"
+        style={{
+          borderColor: "var(--color-outline-dim)",
+        }}
+      >
+        <span
+          className="shrink-0 select-none text-[color:var(--color-primary)]"
+          aria-hidden
+          style={{ fontFamily: "ui-monospace, monospace" }}
+        >
+          {"›"}
         </span>
-        <div className="relative min-w-0 flex-1 py-2" style={{ fontFamily: "ui-monospace, monospace" }}>
+        <div className="relative min-w-0 flex-1">
           <input
             ref={inputRef}
             type="text"
@@ -77,22 +85,29 @@ export function CommandInput({
             spellCheck={false}
             className="w-full border-0 bg-transparent p-0 text-sm text-[color:var(--color-on-surface)] outline-none placeholder:text-[color:var(--color-outline)]"
             style={{
+              fontFamily: "ui-monospace, monospace",
               caretColor: "transparent",
               letterSpacing: "0.045em",
             }}
           />
           <span
             ref={measureRef}
-            className="pointer-events-none invisible absolute top-2 left-0 whitespace-pre text-sm"
+            className="pointer-events-none invisible absolute top-0 left-0 whitespace-pre text-sm"
             aria-hidden
             style={{ letterSpacing: "0.045em" }}
           />
           <span
-            className="terminal-cursor-block pointer-events-none absolute top-2 translate-y-[0.125em]"
             aria-hidden
             style={{
+              position: "absolute",
+              backgroundColor: "var(--color-primary)",
+              width: "2px",
+              height: "1.3em",
+              borderRadius: "2px",
               left: `${cursorLeft}px`,
-              display: disabled ? "none" : "inline-block",
+              top: "4px",
+              display: disabled ? "none" : "block",
+              animation: disabled ? "none" : "blink 1.05s steps(1, end) infinite",
             }}
           />
         </div>

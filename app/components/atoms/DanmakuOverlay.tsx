@@ -114,7 +114,7 @@ export function DanmakuOverlay() {
               left: 0,
               animation: `dm-scroll ${SCROLL_DURATION}s linear forwards`,
               color: d.color,
-              fontFamily: "var(--font-headline), 'Space Grotesk', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+              fontFamily: "'PingFang SC', 'Microsoft YaHei', sans-serif",
               textShadow:
                 "0 0 4px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.95)",
               zIndex: 9999,

@@ -25,10 +25,10 @@ export function Player() {
 
   return (
     <div
-      className="flex flex-col gap-4 rounded-sm border p-4 md:gap-5 md:p-5"
+      className="flex flex-col gap-4 rounded-2xl p-4 md:gap-5 md:p-5"
       style={{
-        borderColor: "var(--color-outline-variant)",
-        backgroundColor: "var(--color-surface-container-low)",
+        backgroundColor: "var(--color-surface-dim)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)",
       }}
     >
       <TrackInfo track={state.current} playing={state.playing} />

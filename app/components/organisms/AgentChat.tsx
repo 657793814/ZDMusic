@@ -11,20 +11,17 @@ import { useEffect, useMemo, useRef } from "react";
 
 const ThinkingCard = (
   <article className="mb-2 flex w-full justify-start" key="__thinking__">
-    <div
-      className="max-w-[min(100%,38rem)] border-l-[3px] border-transparent pl-4 pr-4 pt-3 pb-3"
-      style={{ borderLeftColor: "var(--color-outline-variant)" }}
-    >
-      <div className="mb-2 flex items-baseline gap-2 opacity-92">
+    <div className="max-w-[min(100%,38rem)] rounded-lg bg-[color-mix(in_srgb,var(--color-primary)_6%,transparent)] px-4 py-3">
+      <div className="mb-2 flex items-baseline gap-2">
         <span
-          className="terminal-label"
-          style={{ fontFamily: "var(--font-headline)", letterSpacing: "var(--tracking-label)" }}
+          className="text-[10px] font-medium tracking-[var(--tracking-label)]"
+          style={{ fontFamily: "var(--font-body)", color: "var(--color-primary)" }}
         >
           __AGENT_LABEL__
         </span>
         <span
-          className="text-[10px] uppercase tracking-[0.12em]"
-          style={{ fontFamily: "var(--font-headline)", color: "var(--color-outline)" }}
+          className="text-[10px] font-medium tracking-[var(--tracking-label)] opacity-70"
+          style={{ fontFamily: "var(--font-body)", color: "var(--color-outline)" }}
         >
           __THINKING__
         </span>
@@ -64,20 +61,17 @@ export function AgentChat() {
   const thinkingCardWithText = useMemo(() => {
     return (
       <article className="mb-2 flex w-full justify-start" key="__thinking__">
-        <div
-          className="max-w-[min(100%,38rem)] border-l-[3px] border-transparent pl-4 pr-4 pt-3 pb-3"
-          style={{ borderLeftColor: "var(--color-outline-variant)" }}
-        >
-          <div className="mb-2 flex items-baseline gap-2 opacity-92">
+        <div className="max-w-[min(100%,38rem)] rounded-lg bg-[color-mix(in_srgb,var(--color-primary)_6%,transparent)] px-4 py-3">
+          <div className="mb-2 flex items-baseline gap-2">
             <span
-              className="terminal-label"
-              style={{ fontFamily: "var(--font-headline)", letterSpacing: "var(--tracking-label)" }}
+              className="text-[10px] font-medium tracking-[var(--tracking-label)]"
+              style={{ fontFamily: "var(--font-body)", color: "var(--color-primary)" }}
             >
               {t("agentLabel")}
             </span>
             <span
-              className="text-[10px] uppercase tracking-[0.12em]"
-              style={{ fontFamily: "var(--font-headline)", color: "var(--color-outline)" }}
+              className="text-[10px] font-medium tracking-[var(--tracking-label)] opacity-70"
+              style={{ fontFamily: "var(--font-body)", color: "var(--color-outline)" }}
             >
               {t("thinking")}
             </span>
@@ -126,15 +120,15 @@ export function AgentChat() {
 
   return (
     <section
-      className="flex h-full min-h-[min(420px,70vh)] w-full flex-1 flex-col overflow-hidden rounded-sm border md:min-h-0"
+      className="flex h-full min-h-[min(560px,70vh)] w-full flex-1 flex-col overflow-hidden rounded-2xl md:min-h-0"
       style={{
-        borderColor: "var(--color-surface-container-high)",
-        backgroundColor: "var(--color-surface-container-low)",
+        backgroundColor: "var(--color-surface-dim)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)",
       }}
     >
       <header
         className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b px-3 py-2.5 md:px-4"
-        style={{ borderColor: "var(--color-outline-variant)" }}
+        style={{ borderColor: "var(--color-outline-dim)" }}
       >
         <GlowDot color="primary" />
         <Label size="md" className="text-[color:var(--color-on-surface)]">
@@ -165,7 +159,7 @@ export function AgentChat() {
         <div ref={bottomRef} aria-hidden />
       </div>
 
-      <div className="shrink-0 border-t px-3 py-3 md:px-4" style={{ borderColor: "var(--color-outline-variant)" }}>
+      <div className="shrink-0 border-t px-3 py-3 md:px-4" style={{ borderColor: "var(--color-outline-dim)" }}>
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <CommandInput disabled={loading} onSubmit={(txt) => void sendMessage(txt)} />
@@ -175,9 +169,9 @@ export function AgentChat() {
               type="button"
               aria-label={t("cancel")}
               onClick={cancel}
-              className="group relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border bg-transparent transition-colors outline-none focus-visible:ring-1 hover:border-[color:var(--color-error)] hover:text-[color:var(--color-error)]"
+              className="group relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-transparent transition-colors outline-none focus-visible:ring-1 hover:border-[color:var(--color-error)] hover:text-[color:var(--color-error)]"
               style={{
-                borderColor: "var(--color-outline-variant)",
+                borderColor: "var(--color-outline-dim)",
                 color: "var(--color-outline)",
               }}
             >
@@ -185,12 +179,12 @@ export function AgentChat() {
                 <rect x="6" y="6" width="12" height="12" rx="1" stroke="none" />
               </svg>
               <span
-                className="pointer-events-none absolute -bottom-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded px-2 py-1 text-[10px] uppercase tracking-[0.12em] opacity-0 transition-opacity group-hover:opacity-100"
+                className="pointer-events-none absolute -bottom-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-medium tracking-[var(--tracking-label)] opacity-0 transition-opacity group-hover:opacity-100"
                 style={{
-                  fontFamily: "var(--font-headline)",
-                  backgroundColor: "var(--color-surface-container-high)",
+                  fontFamily: "var(--font-body)",
+                  backgroundColor: "var(--color-surface-raised)",
                   color: "var(--color-error)",
-                  border: "1px solid var(--color-outline-variant)",
+                  border: "1px solid var(--color-outline-dim)",
                 }}
               >
                 {t("stopAgent")}

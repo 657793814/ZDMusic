@@ -11,15 +11,15 @@ type LabelProps = {
 };
 
 const sizeStyles: Record<LabelSize, string> = {
-  sm: "text-[12px] font-semibold tracking-[0.15em]",
-  md: "text-[14px] font-medium tracking-[0.2em]",
+  sm: "text-[12px] font-medium tracking-[var(--tracking-label)]",
+  md: "text-[14px] font-medium tracking-[var(--tracking-label)]",
 };
 
 export function Label({ children, size = "sm", className }: LabelProps) {
   return (
     <span
       className={[
-        "inline font-['Space_Grotesk',sans-serif] uppercase text-[color:var(--color-on-surface,#e8e8e8)]",
+        "inline font-medium text-[color:var(--color-on-surface,#e8e8e8)]",
         sizeStyles[size],
         className,
       ]

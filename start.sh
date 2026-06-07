@@ -53,30 +53,20 @@ check_dependencies() {
 
 # 停止正在运行的服务器
 stop_server() {
-    if [ -f "$PID_FILE" ]; then
-        PID=$(cat "$PID_FILE")
-        if kill -0 "$PID" 2>/dev/null; then
-            warn "检测到正在运行的服务器 (PID: $PID)，正在停止..."
-            kill "$PID" 2>/dev/null || true
-            sleep 2
-            # 强制终止
-            if kill -0 "$PID" 2>/dev/null; then
-                kill -9 "$PID" 2>/dev/null || true
-            fi
-            rm -f "$PID_FILE"
-            info "服务器已停止"
-        else
-            rm -f "$PID_FILE"
-        fi
+    info "检查端口 3000 占用情况..."
+    
+    # 停止可能存在的 Next.js 进程
+    pkill -f "next dev" 2>/dev/null || true
+    
+    # 等待进程停止
+    sleep 2
+    
+    # 使用 fuser 检查端口占用（更可靠）
+    if command -v fuser &> /dev/null; then
+        fuser -k 3000/tcp 2>/dev/null || true
     fi
     
-    # 检查是否有其他占用端口3000的进程
-    PORT_PID=$(lsof -ti:3000 2>/dev/null)
-    if [ -n "$PORT_PID" ]; then
-        warn "检测到端口 3000 被进程 $PORT_PID 占用，正在强制终止..."
-        kill -9 "$PORT_PID" 2>/dev/null || true
-        sleep 1
-    fi
+    info "端口清理完成"
 }
 
 # 启动开发服务器

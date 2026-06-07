@@ -3,7 +3,8 @@ import { NextRequest } from "next/server";
 import { execSync } from "child_process";
 import { mkdirSync, readdirSync, renameSync, existsSync, writeFileSync } from "fs";
 import { join } from "path";
-import { MUSIC_DIR } from "@/app/lib/tracks";
+import { MUSIC_DIR, scanTracks } from "@/app/lib/tracks";
+import { searchVideos } from "@/app/lib/bili";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -199,31 +200,25 @@ const CLOUD_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 // ============================================================
 // Tool Execution
 // ============================================================
-/** 从 NextRequest 提取当前服务 base URL */
-function getBaseUrl(req: NextRequest): string {
-  const host = req.headers.get("host") || "localhost:3000";
-  const protocol = req.nextUrl.protocol; // "http:" or "https:"
-  return `${protocol}//${host}`;
+
+async function searchTracks(q: string, limit?: number): Promise<string> {
+  const all = await scanTracks();
+  const tracks = q
+    ? all.filter((t) => {
+        const hay = `${t.title} ${t.author} ${t.filename}`.toLowerCase();
+        return hay.includes(q.toLowerCase());
+      })
+    : all;
+  const result = tracks.slice(0, limit || 20);
+  return JSON.stringify({ total: result.length, tracks: result });
 }
 
-async function searchTracks(baseUrl: string, q: string, limit?: number): Promise<string> {
-  const params = new URLSearchParams();
-  params.set("q", q);
-  if (limit) params.set("limit", String(limit));
-  const res = await fetch(`${baseUrl}/api/search?${params}`);
-  const data = await res.json();
-  return JSON.stringify(data);
+async function searchBilibili(keyword: string): Promise<string> {
+  const result = await searchVideos(keyword);
+  return JSON.stringify(result);
 }
 
-async function searchBilibili(baseUrl: string, keyword: string): Promise<string> {
-  const params = new URLSearchParams();
-  params.set("keyword", keyword);
-  const res = await fetch(`${baseUrl}/api/bili/search?${params}`);
-  const data = await res.json();
-  return JSON.stringify(data);
-}
-
-async function convertBilibiliVideos(baseUrl: string, bvids: string[], titles?: string[]): Promise<string> {
+async function convertBilibiliVideos(bvids: string[], titles?: string[]): Promise<string> {
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const biliDir = join(MUSIC_DIR, today);
 
@@ -272,25 +267,19 @@ async function convertBilibiliVideos(baseUrl: string, bvids: string[], titles?: 
   }
 
   // 5. Scan for track metadata
-  console.log(`[convertBilibiliVideos] Scanning ${baseUrl}/api/tracks/scan?subDir=${today}`);
-  const scanRes = await fetch(`${baseUrl}/api/tracks/scan?subDir=${today}`);
-  if (!scanRes.ok) {
-    const scanText = await scanRes.text();
-    throw new Error(`扫描曲库失败 (${scanRes.status}): ${scanText}`);
-  }
-  const scanData: any = await scanRes.json();
-  const scanTracks: any[] = scanData.tracks || [];
-  console.log(`[convertBilibiliVideos] Scan returned ${scanTracks.length} tracks`);
+  const allTracks = await scanTracks();
+  const scanTracksList: any[] = allTracks.filter((t) => t.subDir === today);
+  console.log(`[convertBilibiliVideos] Scan returned ${scanTracksList.length} tracks`);
 
   // 6. 匹配下载的文件，关联 bvid 并返回
-  // 优先找本次新增的文件；若无新增，则匹配目录中已有的文件（重试场景）
-  const finalNewFiles = readdirSync(biliDir).filter((f) => !beforeFiles.has(f));
+  const afterFiles2 = readdirSync(biliDir);
+  const finalNewFiles = afterFiles2.filter((f) => !beforeFiles.has(f));
   const hasNewFiles = finalNewFiles.length > 0;
   const relevantFiles = hasNewFiles
     ? finalNewFiles
-    : readdirSync(biliDir).filter((f) => f.endsWith(".mp3"));
+    : afterFiles2.filter((f) => f.endsWith(".mp3"));
 
-  const added = scanTracks
+  const added = scanTracksList
     .filter((t: any) => t.filename && relevantFiles.includes(t.filename))
     .map((t: any) => {
       const matchedBv = bvids.find(
@@ -303,7 +292,7 @@ async function convertBilibiliVideos(baseUrl: string, bvids: string[], titles?: 
   if (!hasNewFiles && added.length === 0) {
     // 极端兜底：扫描结果没匹配上，直接按文件名匹配 BV 构造 track
     console.log(`[convertBilibiliVideos] No scan match, building from filenames...`);
-    const allMp3 = readdirSync(biliDir).filter((f) => f.endsWith(".mp3"));
+    const allMp3 = afterFiles2.filter((f) => f.endsWith(".mp3"));
     for (const f of allMp3) {
       const matchedBv = bvids.find((bv) => f.includes(bv));
       if (!matchedBv) continue;
@@ -325,14 +314,14 @@ async function convertBilibiliVideos(baseUrl: string, bvids: string[], titles?: 
   return JSON.stringify({ status: "completed", tracks: added }, null, 2);
 }
 
-async function executeTool(baseUrl: string, name: string, args: any): Promise<string> {
+async function executeTool(name: string, args: any): Promise<string> {
   switch (name) {
     case "search_tracks":
-      return searchTracks(baseUrl, args.q, args.limit);
+      return searchTracks(args.q, args.limit);
     case "search_bilibili":
-      return searchBilibili(baseUrl, args.keyword);
+      return searchBilibili(args.keyword);
     case "convert_bilibili_videos":
-      return convertBilibiliVideos(baseUrl, args.bvids, args.titles);
+      return convertBilibiliVideos(args.bvids, args.titles);
     default:
       return JSON.stringify({ error: `Unknown tool: ${name}` });
   }
@@ -380,8 +369,6 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const baseUrl = getBaseUrl(req);
-
       const send = (event: string, data: unknown) => {
         controller.enqueue(
           encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
@@ -510,7 +497,7 @@ export async function POST(req: NextRequest) {
             );
 
             // Execute tool
-            const result = await executeTool(baseUrl, tc.name, args);
+            const result = await executeTool(tc.name, args);
 
             // Send result to frontend
             send(

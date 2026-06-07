@@ -2,17 +2,6 @@
 
 import { useCallback, useRef } from "react";
 
-const DANCE_CSS = [
-  "@keyframes pcb-body{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}",
-  "@keyframes pcb-cl{0%,100%{transform:translate(0,0)}50%{transform:translate(-1px,-4px)}}",
-  "@keyframes pcb-cr{0%,100%{transform:translate(0,0)}50%{transform:translate(1px,-4px)}}",
-  "@keyframes pcb-lg{0%,100%{transform:translateX(0)}33%{transform:translateX(-1px)}66%{transform:translateX(1px)}}",
-  ".pcb-body{animation:pcb-body .5s ease-in-out infinite}",
-  ".pcb-cl{animation:pcb-cl .5s ease-in-out infinite}",
-  ".pcb-cr{animation:pcb-cr .5s ease-in-out infinite .25s}",
-  ".pcb-lg{animation:pcb-lg .5s ease-in-out infinite}",
-].join("");
-
 type Props = {
   progress: number;
   duration: number;
@@ -25,7 +14,7 @@ function fmt(seconds: number) {
   const total = Math.floor(seconds);
   const m = Math.floor(total / 60);
   const s = total % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 export function SeekBar({ progress, duration, playing = false, onSeek }: Props) {
@@ -68,9 +57,9 @@ export function SeekBar({ progress, duration, playing = false, onSeek }: Props) 
 
   return (
     <div className="flex w-full flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.12em]"
+      <div className="flex items-center justify-between gap-3 text-[11px] font-medium tracking-[var(--tracking-label)]"
         style={{
-          fontFamily: "var(--font-headline)",
+          fontFamily: "var(--font-body)",
           color: "var(--color-outline)",
         }}>
         <span>{fmt(progress)}</span>
@@ -83,38 +72,34 @@ export function SeekBar({ progress, duration, playing = false, onSeek }: Props) 
         aria-valuemax={Math.round(d)}
         aria-valuenow={Math.round(progress)}
         ref={barRef}
-        className="relative h-1 cursor-pointer rounded-full bg-[var(--color-surface-container-high)] transition-colors hover:h-1.5"
+        className="relative h-1 w-full cursor-pointer overflow-visible rounded-full bg-[var(--color-surface-overlay)]"
         onMouseDown={onMouseDown}
         onKeyDown={onKeyDown}
       >
         <div
-          className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-[var(--color-primary-dim)] to-[var(--color-primary)] transition-[width] duration-75"
-          style={{ width: `${pct}%` }}
+          className="h-1 rounded-full transition-[width] duration-75"
+          style={{
+            width: `${pct}%`,
+            background: "linear-gradient(90deg, var(--color-primary-dim), var(--color-primary))",
+          }}
         />
-        <svg
-          width={20}
-          height={20}
-          viewBox="0 0 11 8"
-          fill="currentColor"
+        <div
+          className="pointer-events-none absolute"
+          style={{
+            left: `${pct}%`,
+            transform: "translate(-50%, calc(-50% - 2px))",
+          }}
           aria-hidden
-          shapeRendering="crispEdges"
-          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-          style={{ left: `${pct}%`, color: "var(--color-primary)" }}
         >
-          {playing && <style>{DANCE_CSS}</style>}
-          <g className={playing ? "pcb-body" : undefined}>
-            <g className={playing ? "pcb-cl" : undefined}>
-              <path d="M1 0h1v1H1zM0 1h2v1H0z" />
-            </g>
-            <g className={playing ? "pcb-cr" : undefined}>
-              <path d="M9 0h1v1H9zM9 1h2v1H9z" />
-            </g>
-            <path d="M1 2h9v1H1zM1 3h2v1H1zM4 3h3v1H4zM8 3h2v1H8zM1 4h9v1H1zM2 5h7v1H2z" />
-            <g className={playing ? "pcb-lg" : undefined}>
-              <path d="M1 6h1v1H1zM3 6h1v1H3zM5 6h1v1H5zM7 6h1v1H7zM9 6h1v1H9zM0 7h1v1H0zM10 7h1v1H10z" />
-            </g>
-          </g>
-        </svg>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="10" fill="var(--color-primary)"
+              style={{
+                filter: "drop-shadow(0 0 4px color-mix(in srgb, var(--color-primary) 60%, transparent))",
+              }}
+            />
+            <circle cx="10" cy="10" r="5" fill="var(--color-surface-raised)" />
+          </svg>
+        </div>
       </div>
     </div>
   );

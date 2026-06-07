@@ -1,6 +1,6 @@
 "use client";
 
-type GlowDotColor = "primary" | "error";
+type GlowDotColor = "primary" | "error" | "success";
 
 type GlowDotProps = {
   color?: GlowDotColor;
@@ -8,28 +8,22 @@ type GlowDotProps = {
   className?: string;
 };
 
-const colorGlow: Record<GlowDotColor, { dot: string; shadow: string }> = {
-  primary: {
-    dot: "bg-[color:var(--color-primary,#6feee1)]",
-    shadow: "0 0 10px color-mix(in srgb, var(--color-primary, #6feee1) 70%, transparent)",
-  },
-  error: {
-    dot: "bg-[color:var(--color-error,#ef4444)]",
-    shadow: "0 0 10px color-mix(in srgb, var(--color-error, #ef4444) 70%, transparent)",
-  },
+const colorMap: Record<GlowDotColor, string> = {
+  primary: "var(--color-primary)",
+  error: "var(--color-error)",
+  success: "var(--color-success)",
 };
 
 export function GlowDot({ color = "primary", size = 8, className }: GlowDotProps) {
-  const { dot, shadow } = colorGlow[color];
-
   return (
     <span
       role="presentation"
-      className={["inline-block shrink-0 rounded-full animate-glow-pulse", dot, className].filter(Boolean).join(" ")}
+      className={["inline-block shrink-0 rounded-full", className].filter(Boolean).join(" ")}
       style={{
         width: size,
         height: size,
-        boxShadow: shadow,
+        backgroundColor: colorMap[color],
+        transition: "opacity var(--dur-short) var(--ease-standard)",
       }}
     />
   );

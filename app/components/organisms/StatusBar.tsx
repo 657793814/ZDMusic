@@ -33,37 +33,42 @@ export function StatusBar() {
 
   return (
     <footer
-      className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t px-4 py-2 md:px-6"
+      className="flex shrink-0 flex-col items-center gap-y-2 border-t px-4 py-3 md:px-6 md:py-4"
       style={{
-        borderColor: "var(--color-outline-variant)",
-        backgroundColor: "var(--color-surface-container-low)",
+        borderColor: "var(--color-outline-dim)",
+        backgroundColor: "var(--color-surface-dim)",
       }}
     >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span className="inline-flex items-center gap-2">
-          <GlowDot color="primary" size={7} />
-          <Label size="sm" className="text-[color:var(--color-primary)]">
-            {t("systemOnline")}
+      <div className="flex w-full items-center justify-between gap-x-4 gap-y-1">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="inline-flex items-center gap-2">
+            <GlowDot color="success" size={7} />
+            <Label size="sm" className="text-[color:var(--color-success)]">
+              {t("systemOnline")}
+            </Label>
+          </span>
+          <Label size="sm" className="text-[color:var(--color-outline)]">
+            {t("mem")} {memUsed} / {memTotal}
           </Label>
-        </span>
-        <Label size="sm" className="text-[color:var(--color-outline)]">
-          {t("mem")} {memUsed} / {memTotal}
-        </Label>
-        <Label size="sm" className="text-[color:var(--color-outline)]">
-          {t("cpuLoad")} {cpuLoad}
-        </Label>
+          <Label size="sm" className="text-[color:var(--color-outline)]">
+            {t("cpuLoad")} {cpuLoad}
+          </Label>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+          <Label size="sm" className="text-[color:var(--color-outline)]">
+            {t("syncStatus")} Verified
+          </Label>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
-        <Label size="sm" className="text-[color:var(--color-outline)]">
-          {t("packetLoss")} 0.00%
-        </Label>
-        <Label size="sm" className="text-[color:var(--color-outline)]">
-          {t("syncStatus")} VERIFIED
-        </Label>
-        <Label size="sm" className="text-[color:var(--color-on-surface)]">
-          {t("nodeVersion")} 1.0.4-BETA
-        </Label>
+      <div className="flex flex-wrap items-center justify-center gap-x-3">
+        <span className="text-[11px] font-medium opacity-50" style={{ fontFamily: "var(--font-body)" }}>
+          鄂ICP备 2026010509号-1
+        </span>
+        <span className="text-[11px] font-medium opacity-50" style={{ fontFamily: "var(--font-body)" }}>
+          鄂公网安备 42110002000318号
+        </span>
       </div>
     </footer>
   );

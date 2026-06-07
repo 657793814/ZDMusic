@@ -1,14 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Track } from "@/app/lib/types";
 import { DanmakuToggle, SpectrumBars } from "@/app/components/atoms";
 import { useI18n } from "@/app/lib/i18n";
-
-const MARQUEE_KF =
-  "@keyframes pcb-mq{0%{transform:translateX(0)}100%{transform:translateX(calc(var(--mq-offset)*-1))}}";
-const MQ_GAP = 64;
-const MQ_SPEED = 40;
 
 type Props = {
   track: Track | null;
@@ -18,19 +13,19 @@ type Props = {
 export function TrackInfo({ track, playing }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
-  const [textWidth, setTextWidth] = useState(0);
+  const [needsMarquee, setNeedsMarquee] = useState(false);
   const { t } = useI18n();
 
   useEffect(() => {
     const container = containerRef.current;
     const text = textRef.current;
     if (!container || !text) {
-      setTextWidth(0);
+      setNeedsMarquee(false);
       return;
     }
 
     const check = () => {
-      setTextWidth(text.scrollWidth > container.clientWidth ? text.scrollWidth : 0);
+      setNeedsMarquee(text.scrollWidth > container.clientWidth);
     };
 
     check();
@@ -40,67 +35,59 @@ export function TrackInfo({ track, playing }: Props) {
   }, [track?.id, track?.title]);
 
   const hasTrack = !!track;
-  const needsMarquee = textWidth > 0;
-  const offset = textWidth + MQ_GAP;
 
   return (
     <div className="flex flex-col gap-3">
-      {needsMarquee && <style>{MARQUEE_KF}</style>}
       <div className="flex items-baseline gap-3">
         <div ref={containerRef} className="min-w-0 flex-1 overflow-hidden">
-          <div
-            className="inline-flex whitespace-nowrap"
-            style={
-              needsMarquee
-                ? ({
-                    animation: `pcb-mq ${offset / MQ_SPEED}s linear infinite`,
-                    "--mq-offset": `${offset}px`,
-                  } as React.CSSProperties)
-                : undefined
-            }
-          >
+          <div className={needsMarquee ? "overflow-hidden" : ""}>
             <span
               ref={textRef}
               className={
                 hasTrack
-                  ? "text-base font-semibold uppercase tracking-[var(--tracking-headline)] md:text-lg"
-                  : "terminal-label opacity-45"
+                  ? "text-base font-semibold tracking-[var(--tracking-label)] md:text-lg"
+                  : "text-[13px] font-medium opacity-45"
               }
-              style={
-                hasTrack
-                  ? { fontFamily: "var(--font-headline)", color: "var(--color-on-surface)" }
-                  : { fontFamily: "var(--font-headline)", letterSpacing: "var(--tracking-label)" }
-              }
+              style={{
+                fontFamily: "var(--font-body)",
+                color: "var(--color-on-surface)",
+                display: "inline-block",
+                whiteSpace: needsMarquee ? "nowrap" : "normal",
+                animation: needsMarquee ? "slide-up 8s linear infinite" : undefined,
+              }}
             >
               {hasTrack ? track.title : t("noSignal")}
             </span>
-            {needsMarquee && (
-              <span
-                className="pl-16 text-base font-semibold uppercase tracking-[var(--tracking-headline)] md:text-lg"
-                style={{ fontFamily: "var(--font-headline)", color: "var(--color-on-surface)" }}
-              >
-                {track!.title}
-              </span>
-            )}
           </div>
         </div>
         {hasTrack && (
-          <span className="shrink-0 text-sm opacity-70" style={{ fontFamily: "var(--font-body)" }}>
+          <span
+            className="shrink-0 text-sm opacity-70"
+            style={{ fontFamily: "var(--font-body)" }}
+          >
             {track.author}
           </span>
         )}
       </div>
       <div className="flex items-center gap-2.5">
         <span
-          className="rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-[var(--tracking-label)]"
           style={{
-            fontFamily: "var(--font-headline)",
-            borderColor: hasTrack && playing ? "var(--color-primary)" : "var(--color-outline-variant)",
+            fontFamily: "var(--font-body)",
+            backgroundColor: hasTrack && playing
+              ? "color-mix(in srgb, var(--color-primary) 12%, transparent)"
+              : "transparent",
+            borderColor: hasTrack && playing ? "var(--color-primary)" : "var(--color-outline-dim)",
             color: hasTrack && playing ? "var(--color-primary)" : "var(--color-outline)",
-            boxShadow: hasTrack && playing ? "0 0 10px var(--color-crt-glow-soft)" : "none",
-            opacity: hasTrack ? 1 : 0.4,
+            border: hasTrack && playing ? "1px solid" : "1px solid transparent",
+            boxShadow: hasTrack && playing ? "0 0 8px color-mix(in srgb, var(--color-primary) 15%, transparent)" : "none",
           }}
         >
+          <span className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{
+              backgroundColor: hasTrack && playing ? "var(--color-success)" : "var(--color-outline)",
+            }}
+          />
           {playing ? t("playing") : t("paused")}
         </span>
         <SpectrumBars active={playing} muted={!hasTrack} />

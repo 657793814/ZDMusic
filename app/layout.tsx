@@ -1,35 +1,17 @@
 import { Providers } from "@/app/components/providers";
 import type { Metadata } from "next";
-import { Caveat, Inter, Press_Start_2P, Space_Grotesk } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
-  weight: ["400", "500", "600", "700"],
-});
-
-const pressStart2P = Press_Start_2P({
-  subsets: ["latin"],
-  variable: "--font-press-start-2p",
-  weight: "400",
-});
-
-const caveat = Caveat({
-  subsets: ["latin"],
-  variable: "--font-caveat",
-  weight: ["400", "500", "600", "700"],
-});
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "AuraMusic",
-  description: "Listen to music anytime, anywhere.",
+  title: "卓动悦听",
+  description: "在任何时间、任何地点播放音乐。",
 };
 
 export default function RootLayout({
@@ -40,8 +22,8 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${spaceGrotesk.variable} ${inter.variable} ${pressStart2P.variable} ${caveat.variable}`}
-      style={{ backgroundColor: "#131314" }}
+      className={`${inter.variable}`}
+      style={{ backgroundColor: "var(--color-surface)" }}
       suppressHydrationWarning
     >
       <head>
