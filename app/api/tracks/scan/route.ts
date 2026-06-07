@@ -1,19 +1,24 @@
 import { NextRequest } from "next/server";
 import { readdir, stat } from "fs/promises";
 import path from "path";
-import { MUSIC_DIR, parseName } from "@/app/lib/tracks";
+import { MUSIC_DIR, parseName, scanTracks } from "@/app/lib/tracks";
 import type { Track } from "@/app/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const subDir = req.nextUrl.searchParams.get("subDir")?.trim();
+
+  // 无 subDir → 全量扫描
   if (!subDir) {
-    return Response.json({ error: "subDir is required" }, { status: 400 });
+    const all = await scanTracks();
+    return Response.json({ tracks: all });
   }
 
+  // 有 subDir → 扫描特定子目录
   const dirPath = path.resolve(MUSIC_DIR, subDir);
-  if (!dirPath.startsWith(MUSIC_DIR)) {
+  const normalizedMusicDir = path.normalize(MUSIC_DIR + path.sep);
+  if (!dirPath.startsWith(normalizedMusicDir)) {
     return Response.json({ error: "invalid subDir" }, { status: 403 });
   }
 

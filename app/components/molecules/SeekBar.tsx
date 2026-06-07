@@ -67,8 +67,8 @@ export function SeekBar({ progress, duration, playing = false, onSeek }: Props) 
   };
 
   return (
-    <div className="flex w-full flex-col gap-2">
-      <div className="flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.12em]"
+    <div className="flex w-full flex-col gap-1.5">
+      <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.12em]"
         style={{
           fontFamily: "var(--font-headline)",
           color: "var(--color-outline)",
@@ -83,21 +83,23 @@ export function SeekBar({ progress, duration, playing = false, onSeek }: Props) 
         aria-valuemax={Math.round(d)}
         aria-valuenow={Math.round(progress)}
         ref={barRef}
-        className="terminal-progress cursor-pointer"
-        style={{ "--progress-pct": `${pct}%` } as React.CSSProperties}
+        className="relative h-1 cursor-pointer rounded-full bg-[var(--color-surface-container-high)] transition-colors hover:h-1.5"
         onMouseDown={onMouseDown}
         onKeyDown={onKeyDown}
       >
-        <div className="terminal-progress-fill" />
+        <div
+          className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-[var(--color-primary-dim)] to-[var(--color-primary)] transition-[width] duration-75"
+          style={{ width: `${pct}%` }}
+        />
         <svg
-          width={24}
-          height={24}
+          width={20}
+          height={20}
           viewBox="0 0 11 8"
           fill="currentColor"
           aria-hidden
           shapeRendering="crispEdges"
-          className="terminal-progress-crab"
-          style={{ color: "var(--color-primary)" }}
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ left: `${pct}%`, color: "var(--color-primary)" }}
         >
           {playing && <style>{DANCE_CSS}</style>}
           <g className={playing ? "pcb-body" : undefined}>

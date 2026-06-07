@@ -1,8 +1,17 @@
 import { readdir, stat } from "fs/promises";
+import { homedir } from "os";
 import path from "path";
 import type { Track } from "./types";
 
-const MUSIC_DIR = process.env.MUSIC_DIR || path.join(process.env.HOME || "", "Documents/bili");
+function expandTilde(p: string): string {
+  if (p === "~") return homedir();
+  if (p.startsWith("~/") || p.startsWith("~\\")) return homedir() + p.slice(1);
+  return p;
+}
+
+const MUSIC_DIR = process.env.MUSIC_DIR
+  ? expandTilde(process.env.MUSIC_DIR)
+  : path.join(homedir(), "Documents/bili");
 
 function isYear(s: string): boolean {
   return /^\d{4}$/.test(s) && s >= "1990" && s <= "2030";

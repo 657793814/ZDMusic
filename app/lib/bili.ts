@@ -32,6 +32,8 @@ const COMMON_HEADERS = {
 
 let cachedKeys: { imgKey: string; subKey: string; ts: number } | null = null;
 let cachedBuvid3: string | null = null;
+let cachedVideoInfo: Record<string, { cid: string; title: string; ts: number }> | null = null;
+const VIDEO_INFO_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 function getMixinKey(imgKey: string, subKey: string): string {
   const raw = imgKey + subKey;
@@ -123,6 +125,12 @@ export interface DanmakuItem {
 }
 
 export async function getVideoInfo(bvid: string): Promise<{ cid: string; title: string }> {
+  // 缓存结果
+  if (cachedVideoInfo?.[bvid]) {
+    const cached = cachedVideoInfo[bvid];
+    if (Date.now() - cached.ts < VIDEO_INFO_TTL) return cached;
+  }
+
   const { imgKey, subKey } = await getWbiKeys();
   const mixinKey = getMixinKey(imgKey, subKey);
   const buvid3 = await ensureBuvid3();
@@ -148,17 +156,30 @@ export async function getVideoInfo(bvid: string): Promise<{ cid: string; title: 
   };
 
   if (json.code !== 0 || !json.data?.cid) {
-    throw new Error(`Failed to get video info for ${bvid}`);
+    throw new Error(`Failed to get video info for ${bvid}: code=${json.code}`);
   }
 
-  return { cid: String(json.data.cid), title: json.data.title ?? "" };
+  const result = { cid: String(json.data.cid), title: json.data.title ?? "" };
+  cachedVideoInfo = cachedVideoInfo ?? {};
+  cachedVideoInfo[bvid] = { ...result, ts: Date.now() };
+  return result;
 }
 
+let cachedDanmaku: Record<string, { items: DanmakuItem[]; ts: number }> | null = null;
+const DANMAKU_TTL = 10 * 60 * 1000; // 10 minutes
+
 export async function getDanmaku(cid: string): Promise<DanmakuItem[]> {
+  // 缓存结果，避免频繁请求
+  if (cachedDanmaku?.[cid]) {
+    const cached = cachedDanmaku[cid];
+    if (Date.now() - cached.ts < DANMAKU_TTL) return cached.items;
+  }
+
   const buvid3 = await ensureBuvid3();
+  const oid = parseInt(cid, 10);
 
   const res = await fetch(
-    `https://api.bilibili.com/x/v1/dm/list.so?oid=${cid}`,
+    `https://api.bilibili.com/x/v1/dm/list.so?oid=${oid}`,
     {
       headers: {
         ...COMMON_HEADERS,
@@ -168,6 +189,14 @@ export async function getDanmaku(cid: string): Promise<DanmakuItem[]> {
   );
 
   const xml = await res.text();
+
+  // 如果返回 HTML 错误页面（B站弹幕 API 限流时会返回错误页），返回空
+  if (xml.includes("<!DOCTYPE") || xml.includes("<html")) {
+    console.warn('[Danmaku] API returned HTML instead of XML, likely rate-limited or no danmaku.');
+    cachedDanmaku = cachedDanmaku ?? {};
+    cachedDanmaku[cid] = { items: [], ts: Date.now() };
+    return [];
+  }
 
   const items: DanmakuItem[] = [];
   const dRegex = /<d p="([^"]*)"[^>]*>([^<]*)<\/d>/g;
@@ -185,6 +214,8 @@ export async function getDanmaku(cid: string): Promise<DanmakuItem[]> {
 
   items.sort((a, b) => a.time - b.time);
 
+  cachedDanmaku = cachedDanmaku ?? {};
+  cachedDanmaku[cid] = { items, ts: Date.now() };
   return items;
 }
 

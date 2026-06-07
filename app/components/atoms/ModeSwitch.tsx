@@ -1,14 +1,16 @@
 "use client";
 
 import { useMode, type AppMode } from "@/app/context/ModeContext";
+import { useI18n } from "@/app/lib/i18n";
 
 const MODES: { key: AppMode; label: string }[] = [
-  { key: "local", label: "LOCAL" },
-  { key: "cloud", label: "CLOUD" },
+  { key: "local", label: "local" },
+  { key: "cloud", label: "cloud" },
 ];
 
 export function ModeSwitch() {
   const { mode, setMode } = useMode();
+  const { t } = useI18n();
 
   return (
     <div
@@ -34,7 +36,7 @@ export function ModeSwitch() {
                 : "var(--color-outline)",
             }}
           >
-            {label}
+            {t(label as "local")}
           </button>
         );
       })}

@@ -3,229 +3,256 @@
 import { Label } from "@/app/components/atoms/Label";
 import type { Track } from "@/app/lib/types";
 import { usePlayer } from "@/app/context/PlayerContext";
+import { useI18n } from "@/app/lib/i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-function fmtSec(s: number): string {
-  if (!Number.isFinite(s) || s <= 0) return "—";
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, "0")}`;
-}
-
-function useDurationMap(tracks: Track[]) {
-  const [map, setMap] = useState<Record<string, number>>({});
-  const pending = useRef(new Set<string>());
-
-  useEffect(() => {
-    for (const t of tracks) {
-      if (map[t.id] != null || pending.current.has(t.id)) continue;
-      pending.current.add(t.id);
-
-      const audio = new Audio();
-      audio.preload = "metadata";
-      const id = t.id;
-      audio.addEventListener(
-        "loadedmetadata",
-        () => {
-          const dur = audio.duration;
-          if (Number.isFinite(dur) && dur > 0) {
-            setMap((prev) => ({ ...prev, [id]: dur }));
-          }
-          pending.current.delete(id);
-          audio.src = "";
-        },
-        { once: true }
-      );
-      audio.addEventListener(
-        "error",
-        () => {
-          pending.current.delete(id);
-          audio.src = "";
-        },
-        { once: true }
-      );
-      audio.src = t.url;
-    }
-  }, [tracks, map]);
-
-  return map;
-}
 
 export function Playlist() {
   const { state, playTrack, removeTrack } = usePlayer();
+  const { t } = useI18n();
   const [filter, setFilter] = useState("");
+  const [localTracks, setLocalTracks] = useState<Track[] | null>(null);
+  const fetching = useRef(false);
 
-  const allTracks = state.playlist;
-  const durMap = useDurationMap(allTracks);
+  const load = useCallback(() => {
+    if (fetching.current) return;
+    fetching.current = true;
+    fetch("/api/tracks/scan", { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<{ tracks?: Track[] }>;
+      })
+      .then((d) => {
+        if (d.tracks?.length) {
+          setLocalTracks(d.tracks);
+        } else {
+          setLocalTracks([]);
+        }
+      })
+      .catch(() => {
+        setLocalTracks([]);
+      })
+      .finally(() => {
+        fetching.current = false;
+      });
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (!localTracks && state.playlist.length > 0) {
+      setLocalTracks(state.playlist);
+    }
+  }, [localTracks, state.playlist]);
+
+  const allTracks = useMemo(() => {
+    if (localTracks === null && state.playlist.length > 0) return state.playlist;
+    if (localTracks === null) return [];
+    if (!localTracks.length) return state.playlist;
+    const ids = new Set(localTracks.map((tk) => tk.id));
+    const extras = state.playlist.filter((t) => !ids.has(t.id));
+    return extras.length ? [...localTracks, ...extras] : localTracks;
+  }, [localTracks, state.playlist]);
 
   const q = filter.trim().toLowerCase();
-  const rows = useMemo(() => {
-    if (!q.length) return allTracks;
-    return allTracks.filter((t) => {
-      const hay = `${t.title} ${t.author} ${t.filename}`.toLowerCase();
-      return hay.includes(q);
-    });
-  }, [allTracks, q]);
-
-  const onRowClick = useCallback(
-    (track: Track) => {
-      playTrack(track);
-    },
-    [playTrack]
+  const rows = useMemo(
+    () =>
+      q
+        ? allTracks.filter(
+            (t) =>
+              t.title?.toLowerCase().includes(q) ||
+              t.author?.toLowerCase().includes(q)
+          )
+        : allTracks,
+    [allTracks, q]
   );
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border"
+      className="flex h-[280px] shrink-0 flex-col overflow-hidden rounded-sm border"
       style={{
-        borderColor: "var(--color-surface-container-high)",
+        borderColor: "var(--color-outline-variant)",
         backgroundColor: "var(--color-surface-container-low)",
       }}
     >
+      {/* Header */}
       <div
-        className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2 md:px-4"
-        style={{ borderColor: "var(--color-outline-variant)" }}
+        className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2"
+        style={{
+          borderColor: "var(--color-outline-variant)",
+          backgroundColor: "var(--color-surface-container-lowest)",
+        }}
       >
-        <div className="flex flex-wrap items-baseline gap-2">
-          <Label size="md">ACTIVE_QUEUE.LOG</Label>
+        <div className="flex items-baseline gap-2">
+          <Label size="md">{t("activeQueue")}</Label>
           <span
-            className="text-[12px] tabular-nums opacity-72"
+            className="max-w-[240px] shrink-0 truncate text-[11px] opacity-55"
             style={{ fontFamily: "var(--font-body)" }}
           >
-            [{rows.length}/{allTracks.length}]
+            {state.current
+              ? state.current.title
+              : `${allTracks.length} ${t("trackCount")}`}
           </span>
         </div>
+        <button
+          type="button"
+          onClick={load}
+          className="flex h-6 w-6 items-center justify-center rounded-sm border transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]"
+          style={{
+            borderColor: "var(--color-outline-variant)",
+            color: "var(--color-outline)",
+          }}
+          aria-label={t("refresh")}
+          title={t("refreshTitle")}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <path d="M23 4v6h-6" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+        </button>
       </div>
 
-      <div className="shrink-0 px-3 py-2 md:px-4">
-        <label className="sr-only" htmlFor="playlist-search">
-          Filter queue
-        </label>
+      {/* Filter */}
+      <div className="shrink-0 px-3 py-2">
         <input
-          id="playlist-search"
           type="search"
-          placeholder="FILTER…"
+          placeholder={t("filter")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          className="w-full rounded-sm border px-3 py-2 text-sm outline-none transition-colors placeholder:uppercase placeholder:tracking-[0.14em]"
+          className="w-full rounded-sm border px-3 py-1.5 text-[13px] outline-none transition-colors focus:ring-1 focus:ring-[color:var(--color-primary)]"
           style={{
             fontFamily: "var(--font-body)",
             borderColor: "var(--color-outline-variant)",
-            backgroundColor: "var(--color-surface-container-lowest)",
+            backgroundColor: "var(--color-surface-container-high)",
             color: "var(--color-on-surface)",
           }}
         />
       </div>
 
-      {allTracks.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-4 py-6">
-          <p
-            className="text-center text-xs uppercase tracking-[0.14em] opacity-50"
-            style={{ fontFamily: "var(--font-headline)" }}
-          >
-            QUEUE_EMPTY — 通过右侧 Agent 对话添加歌曲
-          </p>
-        </div>
-      ) : rows.length === 0 ? (
-        <p className="px-3 py-4 text-sm opacity-60 md:px-4" style={{ fontFamily: "var(--font-body)" }}>
-          NO_MATCHES
-        </p>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-auto scrollbar-thin">
-          <table className="w-full border-collapse text-left text-sm">
-            <thead className="sticky top-0 z-[1]" style={{ backgroundColor: "var(--color-surface-container)" }}>
-              <tr style={{ borderBottom: "1px solid var(--color-outline-variant)" }}>
-                <th
-                  className="w-10 px-2 py-2 text-[11px] font-semibold uppercase tracking-[0.14em]"
-                  style={{ fontFamily: "var(--font-headline)", color: "var(--color-outline)" }}
+      {/* Scrollable list */}
+      <div className="flex-1 overflow-y-auto overscroll-contain" style={{ minHeight: 0 }}>
+        {allTracks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 p-6">
+            <p
+              className="text-center text-xs uppercase tracking-[0.14em] opacity-50"
+              style={{ fontFamily: "var(--font-headline)" }}
+            >
+              {localTracks === null && state.playlist.length === 0
+                ? t("loading")
+                : t("queueEmpty")}
+            </p>
+            <button
+              type="button"
+              onClick={load}
+              className="rounded-sm border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]"
+              style={{
+                borderColor: "var(--color-outline-variant)",
+                color: "var(--color-outline)",
+                fontFamily: "var(--font-headline)",
+              }}
+            >
+              {t("scanLocal")}
+            </button>
+          </div>
+        ) : (
+          rows.map((tr, i) => {
+            const active = state.current?.id === tr.id;
+            return (
+              <div
+                key={tr.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => playTrack(tr)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    playTrack(tr);
+                  }
+                }}
+                className="flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors rounded-sm"
+                style={{
+                  borderBottom: "1px solid var(--color-outline-variant)",
+                  backgroundColor: active
+                    ? "color-mix(in srgb, var(--color-primary) 8%, transparent)"
+                    : "transparent",
+                  borderLeft: active
+                    ? "2px solid var(--color-primary)"
+                    : "2px solid transparent",
+                  fontFamily: "var(--font-body)",
+                  color: "var(--color-on-surface)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--color-surface-container-high) 40%, transparent)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                <span
+                  className="w-7 shrink-0 text-center text-[12px] tabular-nums"
+                  style={{
+                    color: active ? "var(--color-primary)" : "var(--color-outline)",
+                    fontWeight: active ? 600 : 400,
+                  }}
                 >
-                  #
-                </th>
-                <th
-                  className="px-2 py-2 text-[11px] font-semibold uppercase tracking-[0.14em]"
-                  style={{ fontFamily: "var(--font-headline)", color: "var(--color-outline)" }}
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[13px]" style={{ fontWeight: active ? 500 : 400 }}>
+                  {tr.title}
+                </span>
+                <span
+                  className="w-12 shrink-0 text-right text-[11px] tabular-nums"
+                  style={{ color: "var(--color-outline)" }}
                 >
-                  TITLE
-                </th>
-                <th
-                  className="w-20 shrink-0 px-2 py-2 text-[11px] font-semibold uppercase tracking-[0.14em]"
-                  style={{ fontFamily: "var(--font-headline)", color: "var(--color-outline)" }}
+                  {tr.size ? Math.round(tr.size / 16000 / 60) + "m" : "—"}
+                </span>
+                <button
+                  type="button"
+                  aria-label={t("remove")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeTrack(tr.id);
+                  }}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors hover:border-red-500 hover:text-red-500"
+                  style={{
+                    borderColor: "var(--color-outline-variant)",
+                    color: "var(--color-outline)",
+                    opacity: active ? 0.6 : 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = "1";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = active ? "0.6" : "0";
+                  }}
                 >
-                  DUR
-                </th>
-              </tr>
-            </thead>
-            <tbody style={{ fontFamily: "var(--font-body)", color: "var(--color-on-surface)" }}>
-              {rows.map((t, idx) => {
-                const active = state.current?.id === t.id;
-                return (
-                  <tr
-                    key={t.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onRowClick(t)}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Enter" && e.key !== " ") return;
-                      e.preventDefault();
-                      onRowClick(t);
-                    }}
-                    className="group relative cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--color-surface-container-high)_55%,transparent)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--color-primary)] focus-visible:ring-inset focus-visible:bg-[color-mix(in_srgb,var(--color-surface-container-high)_55%,transparent)]"
-                    style={{
-                      borderLeftWidth: "3px",
-                      borderLeftStyle: "solid",
-                      borderLeftColor: active ? "var(--color-primary)" : "transparent",
-                    }}
+                  <svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
                   >
-                    <td className="w-10 shrink-0 px-2 py-2.5 tabular-nums text-[color:var(--color-outline)]">
-                      {idx + 1}
-                    </td>
-                    <td className="max-w-0 truncate px-2 py-2.5">{t.title}</td>
-                    <td className="w-20 shrink-0 px-2 py-2.5 text-right tabular-nums opacity-82">
-                      {active && state.duration > 0 ? fmtSec(state.duration) : fmtSec(durMap[t.id])}
-                    </td>
-                    <td className="absolute right-0 top-0 bottom-0 flex items-center justify-center px-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ backgroundColor: "color-mix(in srgb, var(--color-surface-container) 92%, transparent)" }}
-                    >
-                      <button
-                        type="button"
-                        aria-label="移除"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeTrack(t.id);
-                        }}
-                        className="group/rm relative flex h-6 w-6 items-center justify-center rounded-sm border bg-transparent transition-colors hover:border-[color:var(--color-error)] hover:text-[color:var(--color-error)]"
-                        style={{
-                          borderColor: "var(--color-outline-variant)",
-                          color: "var(--color-outline)",
-                        }}
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                        <span
-                          className="pointer-events-none absolute -top-8 right-0 z-10 whitespace-nowrap rounded px-2 py-1 text-[10px] uppercase tracking-[0.12em] opacity-0 transition-opacity group-hover/rm:opacity-100"
-                          style={{
-                            fontFamily: "var(--font-headline)",
-                            backgroundColor: "var(--color-surface-container-high)",
-                            color: "var(--color-error)",
-                            border: "1px solid var(--color-outline-variant)",
-                          }}
-                        >
-                          REMOVE
-                        </span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

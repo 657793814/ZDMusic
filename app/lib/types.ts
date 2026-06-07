@@ -10,6 +10,8 @@ export interface Track {
   bvid?: string;
 }
 
+export type PlayMode = 'playlist' | 'single' | 'shuffle';
+
 export interface ChatMessage {
   id: string;
   role: "agent" | "operator" | "system" | "tool";
@@ -26,6 +28,7 @@ export interface PlayerState {
   progress: number;
   duration: number;
   volume: number;
+  playMode: PlayMode;
 }
 
 export interface AgentState {

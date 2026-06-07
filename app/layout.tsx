@@ -54,7 +54,9 @@ export default function RootLayout({
         className={`${inter.className} antialiased`}
         style={{ backgroundColor: "var(--color-surface)", color: "var(--color-on-surface)" }}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

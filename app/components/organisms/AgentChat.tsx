@@ -6,6 +6,7 @@ import { Label } from "@/app/components/atoms/Label";
 import { ChatMessage } from "@/app/components/molecules/ChatMessage";
 import { CommandInput } from "@/app/components/molecules/CommandInput";
 import { useAgent } from "@/app/context/AgentContext";
+import { useI18n } from "@/app/lib/i18n";
 import { useEffect, useMemo, useRef } from "react";
 
 const ThinkingCard = (
@@ -19,13 +20,13 @@ const ThinkingCard = (
           className="terminal-label"
           style={{ fontFamily: "var(--font-headline)", letterSpacing: "var(--tracking-label)" }}
         >
-          AGENT_01
+          __AGENT_LABEL__
         </span>
         <span
           className="text-[10px] uppercase tracking-[0.12em]"
           style={{ fontFamily: "var(--font-headline)", color: "var(--color-outline)" }}
         >
-          thinking
+          __THINKING__
         </span>
       </div>
       <div className="flex items-center gap-1.5">
@@ -46,6 +47,7 @@ const ThinkingCard = (
 
 export function AgentChat() {
   const { messages, loading, sessionId, sendMessage, cancel } = useAgent();
+  const { t } = useI18n();
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -58,10 +60,49 @@ export function AgentChat() {
 
   const showThinking = loading && (messages.length === 0 || messages[messages.length - 1].role !== "agent");
 
+  // ThinkingCard with i18n text injected
+  const thinkingCardWithText = useMemo(() => {
+    return (
+      <article className="mb-2 flex w-full justify-start" key="__thinking__">
+        <div
+          className="max-w-[min(100%,38rem)] border-l-[3px] border-transparent pl-4 pr-4 pt-3 pb-3"
+          style={{ borderLeftColor: "var(--color-outline-variant)" }}
+        >
+          <div className="mb-2 flex items-baseline gap-2 opacity-92">
+            <span
+              className="terminal-label"
+              style={{ fontFamily: "var(--font-headline)", letterSpacing: "var(--tracking-label)" }}
+            >
+              {t("agentLabel")}
+            </span>
+            <span
+              className="text-[10px] uppercase tracking-[0.12em]"
+              style={{ fontFamily: "var(--font-headline)", color: "var(--color-outline)" }}
+            >
+              {t("thinking")}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{
+                  backgroundColor: "var(--color-primary)",
+                  animation: `thinking-dot 1.4s ease-in-out ${i * 0.2}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </article>
+    );
+  }, [t("agentLabel"), t("thinking")]);
+
   const rendered = useMemo(() => {
     if (!showThinking || messages.length === 0) {
       return showThinking
-        ? [ThinkingCard]
+        ? [thinkingCardWithText]
         : messages.map((m) => <ChatMessage key={m.id} message={m} />);
     }
 
@@ -78,10 +119,10 @@ export function AgentChat() {
 
     return [
       ...before.map((m) => <ChatMessage key={m.id} message={m} />),
-      ThinkingCard,
+      thinkingCardWithText,
       ...after.map((m) => <ChatMessage key={m.id} message={m} />),
     ];
-  }, [messages, showThinking]);
+  }, [messages, showThinking, thinkingCardWithText]);
 
   return (
     <section
@@ -97,18 +138,18 @@ export function AgentChat() {
       >
         <GlowDot color="primary" />
         <Label size="md" className="text-[color:var(--color-on-surface)]">
-          NEURAL_AGENT
+          {t("neuralAgent")}
         </Label>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {loading ? (
-            <Badge label="PROCESSING" variant="primary" />
+            <Badge label={t("processing")} variant="primary" />
           ) : (
-            <Badge label="STANDBY" variant="default" />
+            <Badge label={t("standby")} variant="default" />
           )}
           {sessionId ? (
-            <Badge label="SESSION_OK" variant="primary" />
+            <Badge label={t("sessionOk")} variant="primary" />
           ) : (
-            <Badge label="NO_SESSION" variant="default" />
+            <Badge label={t("noSession")} variant="default" />
           )}
         </div>
       </header>
@@ -116,7 +157,7 @@ export function AgentChat() {
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-2 py-3 md:px-3 md:py-4">
         {messages.length === 0 && !loading ? (
           <p className="px-2 text-center text-sm opacity-55" style={{ fontFamily: "var(--font-body)" }}>
-            Awaiting operator input…
+            {t("awaitingInput")}
           </p>
         ) : (
           rendered
@@ -127,12 +168,12 @@ export function AgentChat() {
       <div className="shrink-0 border-t px-3 py-3 md:px-4" style={{ borderColor: "var(--color-outline-variant)" }}>
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <CommandInput disabled={loading} onSubmit={(t) => void sendMessage(t)} />
+            <CommandInput disabled={loading} onSubmit={(txt) => void sendMessage(txt)} />
           </div>
           {loading && (
             <button
               type="button"
-              aria-label="中断"
+              aria-label={t("cancel")}
               onClick={cancel}
               className="group relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border bg-transparent transition-colors outline-none focus-visible:ring-1 hover:border-[color:var(--color-error)] hover:text-[color:var(--color-error)]"
               style={{
@@ -152,7 +193,7 @@ export function AgentChat() {
                   border: "1px solid var(--color-outline-variant)",
                 }}
               >
-                STOP
+                {t("stopAgent")}
               </span>
             </button>
           )}

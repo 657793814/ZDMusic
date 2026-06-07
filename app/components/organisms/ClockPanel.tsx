@@ -3,10 +3,19 @@
 import { GlowDot } from "@/app/components/atoms/GlowDot";
 import { Label } from "@/app/components/atoms/Label";
 import { useClock } from "@/app/hooks/useClock";
+import { useI18n } from "@/app/lib/i18n";
+import { useEffect, useState } from "react";
 
 export function ClockPanel() {
-  const { time, day, date } = useClock();
+  const { t } = useI18n();
+  const locale = typeof document !== "undefined" ? document.documentElement.lang : "en-US";
+  const { time, day, date } = useClock(locale);
   const [hours, minutes] = time.split(":");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div
@@ -16,9 +25,9 @@ export function ClockPanel() {
       <div className="relative z-10 flex flex-col gap-6">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <GlowDot color="error" />
-          <Label size="sm">LIVE FEED</Label>
+          <Label size="sm">{t("liveFeed")}</Label>
           <Label size="sm" className="text-[color:var(--color-primary)]">
-            STRM_SYNC: ACTIVE
+            {t("strmSync")}
           </Label>
         </div>
 
@@ -37,17 +46,19 @@ export function ClockPanel() {
             <span className="colon-blink">:</span>
             {minutes}
           </div>
-          <div
-            className="mt-4 flex flex-wrap items-baseline justify-center gap-x-4 gap-y-2 md:justify-start"
-            style={{ fontFamily: "var(--font-headline)", color: "var(--color-on-surface)" }}
-          >
-            <span className="text-sm uppercase opacity-92" style={{ letterSpacing: "0.2em" }}>
-              {day}
-            </span>
-            <span className="text-sm opacity-78" style={{ fontFamily: "var(--font-body)" }}>
-              {date}
-            </span>
-          </div>
+          {mounted && (
+            <div
+              className="mt-4 flex flex-wrap items-baseline justify-center gap-x-4 gap-y-2 md:justify-start"
+              style={{ fontFamily: "var(--font-headline)", color: "var(--color-on-surface)" }}
+            >
+              <span className="text-sm uppercase opacity-92" style={{ letterSpacing: "0.2em" }}>
+                {day}
+              </span>
+              <span className="text-sm opacity-78" style={{ fontFamily: "var(--font-body)" }}>
+                {date}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

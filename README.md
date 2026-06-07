@@ -27,7 +27,7 @@ AI Agent 驱动的 B站音频播放器。随时随地，想听就听，不止于
 | 框架 | Next.js 16 (App Router) |
 | 前端 | React 19 / TypeScript 5 |
 | 样式 | Tailwind CSS 4 + CSS Variables |
-| AI | @anthropic-ai/claude-agent-sdk（支持 DeepSeek / Claude） |
+| AI | OpenAI SDK（兼容 Agnes / DeepSeek / Anthropic 等 OpenAI 风格 API） |
 
 ## Getting Started
 
@@ -35,7 +35,9 @@ AI Agent 驱动的 B站音频播放器。随时随地，想听就听，不止于
 
 - Node.js >= 20
 - pnpm（推荐）或 npm
-- AI API Key（推荐 [DeepSeek](https://platform.deepseek.com/api_keys)，也支持 Anthropic Claude）
+- AI API Key
+  - 推荐 [Agnes AI](https://apihub.agnes-ai.com/)（国内大模型聚合平台）
+  - 也支持 [DeepSeek](https://platform.deepseek.com/api_keys) 或 [Anthropic Claude](https://console.anthropic.com/)
 
 ### 安装
 
@@ -51,13 +53,13 @@ pnpm install
 cp .env.example .env.local
 ```
 
-编辑 `.env.local`，填入你的 API Key：
+编辑 `.env.local`，根据你的服务商配置（详见 `.env.example` 中的选项）：
 
 ```env
-# 推荐使用 DeepSeek（中文能力强、免费额度大）
-# 获取 Key: https://platform.deepseek.com/api_keys
-ANTHROPIC_BASE_URL=https://api.deepseek.com
-ANTHROPIC_API_KEY=your-deepseek-api-key
+# Agnes AI（推荐，国内直连）
+ANTHROPIC_BASE_URL=https://apihub.agnes-ai.com/v1
+ANTHROPIC_API_KEY=sk-your-agnes-api-key
+ANTHROPIC_MODEL=agnes-2.0-flash
 
 # 音频存储目录（可选，默认 ~/Documents/bili）
 # MUSIC_DIR=/path/to/your/music

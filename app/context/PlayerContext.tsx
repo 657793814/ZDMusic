@@ -1,6 +1,6 @@
 "use client";
 
-import type { Track, PlayerState } from "@/app/lib/types";
+import type { Track, PlayerState, PlayMode } from "@/app/lib/types";
 import { useAudioPlayer } from "@/app/hooks/useAudioPlayer";
 import {
   createContext,
@@ -25,17 +25,60 @@ type PlayerCtx = {
   setVolume: (n: number) => void;
   stop: () => void;
   audioRef: React.RefObject<HTMLAudioElement | null>;
+  scanLocalTracks: () => void;
+  playMode: PlayMode;
+  setPlayMode: (mode: PlayMode) => void;
 };
 
 const PlayerContext = createContext<PlayerCtx | null>(null);
 
+function pickNextIndex(mode: 'playlist' | 'shuffle', playlist: Track[], currentIndex: number): number {
+  const len = playlist.length;
+  if (len <= 1) return 0;
+  if (mode !== 'shuffle') return (currentIndex + 1) % len;
+  let ni: number;
+  do {
+    ni = Math.floor(Math.random() * len);
+  } while (ni === currentIndex);
+  return ni;
+}
+
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [playlist, setPlaylist] = useState<Track[]>([]);
   const [index, setIndex] = useState(-1);
-
+  const [playMode, setPlayMode] = useState<PlayMode>('playlist');
   const playlistRef = useRef<Track[]>([]);
   const indexRef = useRef(-1);
+  const playModeRef = useRef<PlayMode>('playlist');
   const playTrackInternalRef = useRef<(track: Track) => void>(() => {});
+  const hasScannedRef = useRef(false);
+
+  // 首次挂载自动扫描本地曲库
+  useEffect(() => {
+    if (!hasScannedRef.current) {
+      hasScannedRef.current = true;
+      fetch("/api/tracks/scan", { cache: "no-store" })
+        .then((r) => {
+          if (!r.ok) throw new Error(`scan failed: ${r.status}`);
+          return r.json() as Promise<{ tracks?: Track[] }>;
+        })
+        .then((data) => {
+          if (data.tracks?.length) {
+            setPlaylist(data.tracks);
+            playlistRef.current = data.tracks;
+            if (indexRef.current < 0) {
+              setIndex(0);
+              indexRef.current = 0;
+            }
+          }
+        })
+        .catch(() => {/* 静默处理 */});
+    }
+  }, []);
+
+  useEffect(() => {
+    playModeRef.current = playMode;
+  }, [playMode]);
 
   useEffect(() => {
     playlistRef.current = playlist;
@@ -47,11 +90,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const handleEnded = useCallback(() => {
     const pl = playlistRef.current;
+    const mode = playModeRef.current;
+    const ci = indexRef.current;
     if (!pl.length) return;
-    const ni = (indexRef.current + 1) % pl.length;
-    const t = pl[ni];
+
+    if (mode === 'single') {
+      const t = pl[ci];
+      if (t) playTrackInternalRef.current(t);
+      return;
+    }
+
+    const ni = pickNextIndex(mode, pl, ci);
     setIndex(ni);
     indexRef.current = ni;
+    const t = pl[ni];
     if (t) playTrackInternalRef.current(t);
   }, []);
 
@@ -108,7 +160,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         const curIdx = indexRef.current;
 
         if (rmIdx === curIdx) {
-          // removing the currently playing track
           if (next.length === 0) {
             setIndex(-1);
             indexRef.current = -1;
@@ -121,12 +172,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             if (t) playTrack(t);
           }
         } else if (rmIdx < curIdx) {
-          // removed a track before current — shift index back
           const newIdx = curIdx - 1;
           setIndex(newIdx);
           indexRef.current = newIdx;
         }
-        // rmIdx > curIdx: index unchanged
 
         return next;
       });
@@ -168,12 +217,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const i = indexRef.current;
     const pl = playlistRef.current;
     if (!pl.length) return;
-    const ni = Math.min(pl.length - 1, Math.max(i + 1, 0));
-    if (ni === i && i >= 0) return;
-    setIndex(ni);
-    indexRef.current = ni;
-    const t = pl[ni];
-    if (t) playTrack(t);
+    const mode = playModeRef.current;
+
+    if (mode === 'shuffle') {
+      const ni = pickNextIndex('shuffle', pl, i);
+      setIndex(ni);
+      indexRef.current = ni;
+      const t = pl[ni];
+      if (t) playTrack(t);
+    } else if (mode === 'single') {
+      const ni = Math.min(pl.length - 1, Math.max(i + 1, 0));
+      if (ni === i && i >= 0) return;
+      setIndex(ni);
+      indexRef.current = ni;
+      const t = pl[ni];
+      if (t) playTrack(t);
+    } else {
+      const ni = Math.min(pl.length - 1, Math.max(i + 1, 0));
+      if (ni === i && i >= 0) return;
+      setIndex(ni);
+      indexRef.current = ni;
+      const t = pl[ni];
+      if (t) playTrack(t);
+    }
   }, [playTrack]);
 
   const prev = useCallback(() => {
@@ -188,22 +254,51 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [playTrack]);
 
   const togglePlayWrapped = useCallback(() => {
-    if (indexRef.current < 0 || !playlistRef.current[indexRef.current]) {
+    const currentTrack = playlistRef.current[indexRef.current];
+    if (!currentTrack) {
       const first = playlistRef.current[0];
       if (first) {
-        setIndex(0);
-        indexRef.current = 0;
+        if (indexRef.current < 0) {
+          setIndex(0);
+          indexRef.current = 0;
+        }
         playTrack(first);
         return;
       }
+      return;
+    }
+    // If audio element has no src loaded yet, load the current track
+    const audio = audioRef.current;
+    if (audio && !audio.src) {
+      playTrack(currentTrack);
+      return;
     }
     return toggle();
-  }, [toggle, playTrack]);
+  }, [toggle, playTrack, audioRef]);
 
   const stop = useCallback(() => {
     pause();
     seek(0);
   }, [pause, seek]);
+
+  const scanLocalTracks = useCallback(() => {
+    fetch("/api/tracks/scan", { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error(`scan failed: ${r.status}`);
+        return r.json() as Promise<{ tracks?: Track[] }>;
+      })
+      .then((data) => {
+        if (data.tracks?.length) {
+          setPlaylist(data.tracks);
+          playlistRef.current = data.tracks;
+          if (indexRef.current < 0) {
+            setIndex(0);
+            indexRef.current = 0;
+          }
+        }
+      })
+      .catch(() => {/* 静默处理 */});
+  }, []);
 
   const state: PlayerState = useMemo(
     () => ({
@@ -214,8 +309,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       progress,
       duration,
       volume,
+      playMode,
     }),
-    [current, playlist, index, playing, progress, duration, volume]
+    [current, playlist, index, playing, progress, duration, volume, playMode]
   );
 
   const ctx: PlayerCtx = useMemo(
@@ -231,8 +327,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setVolume,
       stop,
       audioRef,
+      scanLocalTracks,
+      playMode,
+      setPlayMode,
     }),
-    [state, playTrackWrapped, addTracks, removeTrack, next, prev, togglePlayWrapped, seek, setVolume, stop, audioRef]
+    [state, playTrackWrapped, addTracks, removeTrack, next, prev, togglePlayWrapped, seek, setVolume, stop, audioRef, scanLocalTracks, playMode, setPlayMode]
   );
 
   return (

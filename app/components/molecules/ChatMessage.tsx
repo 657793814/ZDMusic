@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { Track } from "@/app/lib/types";
 import type { ChatMessage as ChatMessageModel } from "@/app/lib/types";
+import { useI18n, type DictKey } from "@/app/lib/i18n";
 import { usePlayer } from "@/app/context/PlayerContext";
 import { useAgent } from "@/app/context/AgentContext";
 import { useDanmaku } from "@/app/context/DanmakuContext";
@@ -118,6 +119,7 @@ type TrackExt = Track & { bvid?: string; duration?: string };
 
 function AddedCards({ tracks }: { tracks: TrackExt[] }) {
   const { addTracks } = usePlayer();
+  const { t } = useI18n();
   const didAutoAdd = useRef(false);
 
   useEffect(() => {
@@ -140,13 +142,13 @@ function AddedCards({ tracks }: { tracks: TrackExt[] }) {
           className="text-[11px] font-semibold uppercase tracking-[0.14em]"
           style={{ fontFamily: "var(--font-headline)", color: "var(--color-primary)" }}
         >
-          [{tracks.length} TRACKS ADDED]
+          [{tracks.length} {t("tracksAdded")}]
         </span>
       </div>
       <div className="max-h-[16rem] overflow-y-auto scrollbar-thin">
-        {tracks.map((t, i) => (
+        {tracks.map((tr, i) => (
           <div
-            key={t.id || i}
+            key={tr.id || i}
             className="flex items-center gap-2 border-t px-3 py-2"
             style={{ borderColor: "var(--color-outline-variant)" }}
           >
@@ -155,11 +157,11 @@ function AddedCards({ tracks }: { tracks: TrackExt[] }) {
                 className="m-0 truncate text-sm"
                 style={{ fontFamily: "var(--font-body)", color: "var(--color-on-surface)" }}
               >
-                {t.title}
+                {tr.title}
               </p>
               <p className="m-0 truncate text-xs opacity-60" style={{ fontFamily: "var(--font-body)" }}>
-                {t.author}
-                {t.duration && <span className="ml-2 opacity-70">{t.duration}</span>}
+                {tr.author}
+                {tr.duration && <span className="ml-2 opacity-70">{tr.duration}</span>}
               </p>
             </div>
             <span
@@ -197,23 +199,24 @@ function getButtonState(
   return "add";
 }
 
-const BTN_CONFIG: Record<ButtonState, { label: string; disabled: boolean }> = {
-  add: { label: "+ ADD", disabled: false },
-  queued: { label: "QUEUED", disabled: true },
-  converting: { label: "CONVERTING...", disabled: true },
-  added: { label: "ADDED", disabled: true },
+const BTN_CONFIG: Record<ButtonState, { labelKey: string; disabled: boolean }> = {
+  add: { labelKey: "+ ADD", disabled: false },
+  queued: { labelKey: "queued", disabled: true },
+  converting: { labelKey: "converting", disabled: true },
+  added: { labelKey: "added", disabled: true },
 };
 
 function TrackCards({ tracks }: { tracks: TrackExt[] }) {
   const { state, addTracks } = usePlayer();
   const { queueConvert, convertQueue, convertingSet, convertedSet } = useAgent();
   const { fetchDanmaku } = useDanmaku();
-  const inPlaylist = new Set(state.playlist.map((t) => t.id));
+  const { t } = useI18n();
+  const inPlaylist = new Set(state.playlist.map((tr) => tr.id));
 
-  const isCloud = tracks.some((t) => t.bvid);
+  const isCloud = tracks.some((tr) => tr.bvid);
 
-  const allDone = tracks.every((t) => {
-    const s = getButtonState(t, inPlaylist, convertQueue, convertingSet, convertedSet);
+  const allDone = tracks.every((tr) => {
+    const s = getButtonState(tr, inPlaylist, convertQueue, convertingSet, convertedSet);
     return s !== "add";
   });
 
@@ -265,43 +268,44 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
             color: "var(--color-primary)",
           }}
         >
-          {allDone ? "ALL_ADDED" : "ADD_ALL"}
+          {allDone ? t("allAdded") : t("addAll")}
         </button>
       </div>
       <div className="max-h-[16rem] overflow-y-auto scrollbar-thin">
-        {tracks.map((t) => {
-          const btnState = getButtonState(t, inPlaylist, convertQueue, convertingSet, convertedSet);
+        {tracks.map((tr) => {
+          const btnState = getButtonState(tr, inPlaylist, convertQueue, convertingSet, convertedSet);
           const cfg = BTN_CONFIG[btnState];
+          const label = cfg.labelKey === "+ ADD" ? cfg.labelKey : t(cfg.labelKey as DictKey);
           return (
             <div
-              key={t.bvid || t.id}
+              key={tr.bvid || tr.id}
               className="flex items-center gap-2 border-t px-3 py-2"
               style={{ borderColor: "var(--color-outline-variant)" }}
             >
               <div className="min-w-0 flex-1">
                 <p className="m-0 truncate text-sm" style={{ fontFamily: "var(--font-body)" }}>
-                  {t.bvid ? (
+                  {tr.bvid ? (
                     <a
-                      href={`https://www.bilibili.com/video/${t.bvid}`}
+                      href={`https://www.bilibili.com/video/${tr.bvid}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="transition-colors hover:underline"
                       style={{ color: "var(--color-primary)" }}
-                      title={t.title}
+                      title={tr.title}
                     >
-                      {t.title}
+                      {tr.title}
                     </a>
                   ) : (
-                    <span style={{ color: "var(--color-on-surface)" }}>{t.title}</span>
+                    <span style={{ color: "var(--color-on-surface)" }}>{tr.title}</span>
                   )}
                 </p>
                 <p className="m-0 truncate text-xs opacity-60" style={{ fontFamily: "var(--font-body)" }}>
-                  {t.author}
-                  {t.duration && <span className="ml-2 opacity-70">{t.duration}</span>}
+                  {tr.author}
+                  {tr.duration && <span className="ml-2 opacity-70">{tr.duration}</span>}
                 </p>
               </div>
               <button
-                onClick={() => handleAdd(t)}
+                onClick={() => handleAdd(tr)}
                 disabled={cfg.disabled}
                 className="shrink-0 rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-opacity disabled:opacity-40"
                 style={{
@@ -310,7 +314,7 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
                   color: cfg.disabled ? "var(--color-outline)" : "var(--color-primary)",
                 }}
               >
-                {cfg.label}
+                {label}
               </button>
             </div>
           );
@@ -320,11 +324,11 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
   );
 }
 
-function labelFor(role: ChatMessageModel["role"]) {
-  if (role === "agent") return "AGENT_01";
-  if (role === "operator") return "OPERATOR";
-  if (role === "tool") return "TOOL";
-  return "SYS";
+function labelFor(role: ChatMessageModel["role"], t: (key: DictKey) => string) {
+  if (role === "agent") return t("agentLabel");
+  if (role === "operator") return t("operatorLabel");
+  if (role === "tool") return t("toolLabel");
+  return t("sysLabel");
 }
 
 function formatTs(ts: number) {
@@ -395,10 +399,11 @@ function ToolMessage({ message: m }: Props) {
 }
 
 export function ChatMessage({ message: m }: Props) {
+  const { t } = useI18n();
   if (m.role === "tool") return <ToolMessage message={m} />;
 
   const isOp = m.role === "operator";
-  const label = labelFor(m.role);
+  const label = labelFor(m.role, t);
 
   const bgAgent = m.role === "agent";
 

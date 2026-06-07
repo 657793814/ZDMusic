@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Track } from "@/app/lib/types";
 import { DanmakuToggle, SpectrumBars } from "@/app/components/atoms";
+import { useI18n } from "@/app/lib/i18n";
 
 const MARQUEE_KF =
   "@keyframes pcb-mq{0%{transform:translateX(0)}100%{transform:translateX(calc(var(--mq-offset)*-1))}}";
@@ -18,6 +19,7 @@ export function TrackInfo({ track, playing }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [textWidth, setTextWidth] = useState(0);
+  const { t } = useI18n();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -42,7 +44,7 @@ export function TrackInfo({ track, playing }: Props) {
   const offset = textWidth + MQ_GAP;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {needsMarquee && <style>{MARQUEE_KF}</style>}
       <div className="flex items-baseline gap-3">
         <div ref={containerRef} className="min-w-0 flex-1 overflow-hidden">
@@ -61,7 +63,7 @@ export function TrackInfo({ track, playing }: Props) {
               ref={textRef}
               className={
                 hasTrack
-                  ? "text-lg font-semibold uppercase tracking-[var(--tracking-headline)] md:text-xl"
+                  ? "text-base font-semibold uppercase tracking-[var(--tracking-headline)] md:text-lg"
                   : "terminal-label opacity-45"
               }
               style={
@@ -70,11 +72,11 @@ export function TrackInfo({ track, playing }: Props) {
                   : { fontFamily: "var(--font-headline)", letterSpacing: "var(--tracking-label)" }
               }
             >
-              {hasTrack ? track.title : "NO SIGNAL"}
+              {hasTrack ? track.title : t("noSignal")}
             </span>
             {needsMarquee && (
               <span
-                className="pl-16 text-lg font-semibold uppercase tracking-[var(--tracking-headline)] md:text-xl"
+                className="pl-16 text-base font-semibold uppercase tracking-[var(--tracking-headline)] md:text-lg"
                 style={{ fontFamily: "var(--font-headline)", color: "var(--color-on-surface)" }}
               >
                 {track!.title}
@@ -83,23 +85,23 @@ export function TrackInfo({ track, playing }: Props) {
           </div>
         </div>
         {hasTrack && (
-          <span className="shrink-0 min-w-28 text-sm opacity-78 text-right" style={{ fontFamily: "var(--font-body)" }}>
+          <span className="shrink-0 text-sm opacity-70" style={{ fontFamily: "var(--font-body)" }}>
             {track.author}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <span
-          className="w-fit rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]"
+          className="rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]"
           style={{
             fontFamily: "var(--font-headline)",
-            borderColor: hasTrack ? "var(--color-primary)" : "var(--color-outline-variant)",
-            color: hasTrack ? "var(--color-primary)" : "var(--color-outline)",
-            boxShadow: hasTrack ? "0 0 12px var(--color-crt-glow-soft)" : "none",
-            opacity: hasTrack ? 1 : 0.45,
+            borderColor: hasTrack && playing ? "var(--color-primary)" : "var(--color-outline-variant)",
+            color: hasTrack && playing ? "var(--color-primary)" : "var(--color-outline)",
+            boxShadow: hasTrack && playing ? "0 0 10px var(--color-crt-glow-soft)" : "none",
+            opacity: hasTrack ? 1 : 0.4,
           }}
         >
-          PLAYING
+          {playing ? t("playing") : t("paused")}
         </span>
         <SpectrumBars active={playing} muted={!hasTrack} />
         <DanmakuToggle />

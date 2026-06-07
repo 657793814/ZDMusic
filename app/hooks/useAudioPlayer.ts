@@ -101,8 +101,13 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
     el.load();
     setProgress(0);
     setDuration(0);
-    void el.play().catch(() => {
-      /* ignore */
+
+    // Optimistically set playing=true. el.load() fires a "pause" event which would
+    // immediately reset it to false; if play() ultimately fails, we catch it below.
+    setPlaying(true);
+
+    el.play().catch(() => {
+      setPlaying(false);
     });
   }, []);
 

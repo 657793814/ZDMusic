@@ -6,7 +6,7 @@ function pad(n: number) {
   return n.toString().padStart(2, "0");
 }
 
-export function useClock() {
+export function useClock(locale: string = "en-US") {
   const tick = () => {
     const d = new Date();
     const h = d.getHours();
@@ -16,8 +16,8 @@ export function useClock() {
     const time = `${pad(h)}:${pad(m)}`;
     const seconds = pad(s);
 
-    const dayFmt = new Intl.DateTimeFormat("en-US", { weekday: "long" });
-    const dateFmt = new Intl.DateTimeFormat("en-US", {
+    const dayFmt = new Intl.DateTimeFormat(locale, { weekday: "long" });
+    const dateFmt = new Intl.DateTimeFormat(locale, {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -36,7 +36,7 @@ export function useClock() {
   useEffect(() => {
     const id = setInterval(() => setState(tick()), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [locale]);
 
   return state;
 }

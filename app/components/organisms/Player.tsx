@@ -8,7 +8,7 @@ import { VolumeControl } from "@/app/components/molecules/VolumeControl";
 import { usePlayer } from "@/app/context/PlayerContext";
 
 export function Player() {
-  const { state, next, prev, togglePlay, stop, seek, setVolume } = usePlayer();
+  const { state, next, prev, togglePlay, stop, seek, setVolume, playMode, setPlayMode } = usePlayer();
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -25,20 +25,24 @@ export function Player() {
 
   return (
     <div
-      className="flex flex-col gap-5 rounded-sm border p-4 md:p-5"
+      className="flex flex-col gap-4 rounded-sm border p-4 md:gap-5 md:p-5"
       style={{
-        borderColor: "var(--color-surface-container-high)",
-        backgroundColor: "color-mix(in srgb, var(--color-surface-container-low) 88%, transparent)",
+        borderColor: "var(--color-outline-variant)",
+        backgroundColor: "var(--color-surface-container-low)",
       }}
     >
       <TrackInfo track={state.current} playing={state.playing} />
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3 md:gap-4">
         <ControlBar
           playing={state.playing}
+          disabled={state.playlist.length === 0}
+          prevDisabled={state.index <= 0}
           onPrev={prev}
           onToggle={togglePlay}
           onNext={next}
           onStop={stop}
+          playMode={playMode}
+          setPlayMode={setPlayMode}
         />
         <VolumeControl volume={state.volume} onChange={setVolume} />
       </div>

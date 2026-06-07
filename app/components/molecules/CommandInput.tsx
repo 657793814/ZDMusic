@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useI18n } from "@/app/lib/i18n";
 
 type Props = {
   onSubmit: (text: string) => void;
@@ -17,8 +12,9 @@ type Props = {
 export function CommandInput({
   onSubmit,
   disabled = false,
-  placeholder = "Hi, 告诉我你想听什么…",
+  placeholder,
 }: Props) {
+  const { t } = useI18n();
   const [value, setValue] = useState("");
   const [cursorLeft, setCursorLeft] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -40,9 +36,9 @@ export function CommandInput({
   }, [value, syncCursor]);
 
   const submit = useCallback(() => {
-    const t = valueRef.current.trim();
-    if (!t || disabled) return;
-    onSubmit(t);
+    const t_val = valueRef.current.trim();
+    if (!t_val || disabled) return;
+    onSubmit(t_val);
     setValue("");
   }, [disabled, onSubmit]);
 
@@ -67,7 +63,7 @@ export function CommandInput({
             type="text"
             disabled={disabled}
             value={value}
-            placeholder={placeholder}
+            placeholder={placeholder ?? t("placeholder")}
             onChange={(e) => {
               setValue(e.target.value);
               requestAnimationFrame(syncCursor);
