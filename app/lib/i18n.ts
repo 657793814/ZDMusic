@@ -175,7 +175,7 @@ const en: Record<DictKey, string> = {
   danmakuUnavailable: "No danmaku source found",
   local: "LOCAL",
   cloud: "CLOUD",
-  title: "AuraMusic",
+  title: "ZDMusic",
   description: "Listen to music anytime, anywhere.",
 };
 

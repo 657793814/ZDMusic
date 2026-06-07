@@ -70,7 +70,7 @@ export function Playlist() {
 
   return (
     <div
-      className="flex h-[280px] shrink-0 flex-col overflow-hidden rounded-sm border"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-sm border"
       style={{
         borderColor: "var(--color-outline-variant)",
         backgroundColor: "var(--color-surface-container-low)",
