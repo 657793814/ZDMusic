@@ -36,8 +36,6 @@ const COMMON_HEADERS: Record<string, string> = {
 // Cookie header used for API requests that support cookie-based auth
 function buildCookieHeader(buvid3: string): string {
   const parts = [`buvid3=${buvid3}`];
-  // wbi signing needs wk to be present
-  if (process.env.BILIBILI_COOKIE_WK) parts.push(`wk=${process.env.BILIBILI_COOKIE_WK}`);
   if (process.env.BILIBILI_COOKIE_SESSDATA) parts.push(`SESSDATA=${process.env.BILIBILI_COOKIE_SESSDATA}`);
   return parts.join("; ");
 }
@@ -100,8 +98,8 @@ async function delayBeforeApiCall() {
  * Otherwise fetches from B站首页, refreshing every 10 minutes.
  */
 async function ensureBuvid3(): Promise<string> {
-  // If env provides full cookies, use them directly
-  if (process.env.BILIBILI_COOKIE_SESSDATA && process.env.BILIBILI_COOKIE_WK) {
+  // If env provides SESSDATA, use it for authentication
+  if (process.env.BILIBILI_COOKIE_SESSDATA) {
     const buvid3FromCookie = process.env.BILIBILI_COOKIE_BUVID3 || "";
     if (buvid3FromCookie) {
       cachedBuvid3 = buvid3FromCookie;
