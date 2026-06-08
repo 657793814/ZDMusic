@@ -71,7 +71,7 @@ stop_server() {
 
 # 启动开发服务器
 start_server() {
-    info "启动 AuraMusic 开发服务器..."
+    info "启动 ZDMusic 开发服务器..."
     
     # 创建日志目录
     mkdir -p "$PROJECT_DIR/.next/dev/logs"
@@ -98,12 +98,12 @@ start_server() {
     
     # 检查服务器是否成功启动
     if curl -s http://localhost:3000 > /dev/null; then
-        info "AuraMusic 服务器已成功启动！"
+        info "ZDMusic 服务器已成功启动！"
         info "访问地址: http://localhost:3000"
         info "日志文件: $LOG_FILE"
         info "进程ID: $(cat "$PID_FILE")"
     else
-        error "服务器启动失败，请检查日志文件: $LOG_FILE"
+        error "ZDMusic 服务器启动失败，请检查日志文件: $LOG_FILE"
         cat "$LOG_FILE"
         exit 1
     fi
@@ -112,7 +112,7 @@ start_server() {
 # 主函数
 main() {
     echo "=========================================="
-    echo "         AuraMusic 启动脚本"
+    echo "         ZDMusic 启动脚本"
     echo "=========================================="
     
     cd "$PROJECT_DIR"
