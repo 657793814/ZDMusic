@@ -78,7 +78,7 @@ start_server() {
     
     # 启动服务器（后台运行）
     cd "$PROJECT_DIR"
-    npm run dev > "$LOG_FILE" 2>&1 &
+    npm run build && npm run dev > "$LOG_FILE" 2>&1 &
     
     # 等待服务器启动
     info "等待服务器启动..."
