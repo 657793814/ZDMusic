@@ -156,9 +156,10 @@ export function AgentProvider({
           typeof msg.data === "string"
             ? msg.data
             : JSON.stringify(msg.data ?? "error");
+        const sanitized = err.replace(/<[^>]*>/g, "").slice(0, 500);
         setMessages((m) => [
           ...m,
-          { id: newId(), role: "system", content: err, timestamp: Date.now() },
+          { id: newId(), role: "system", content: sanitized, timestamp: Date.now() },
         ]);
       }
     },

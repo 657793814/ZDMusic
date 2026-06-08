@@ -496,25 +496,47 @@ export async function POST(req: NextRequest) {
               })
             );
 
-            // Execute tool
-            const result = await executeTool(tc.name, args);
+            let result: string;
+            try {
+              result = await executeTool(tc.name, args);
 
-            // Send result to frontend
-            send(
-              "output",
-              sseEvent(sessionId, {
-                type: "result",
-                subtype: "success",
-                result,
-              })
-            );
+              // Send result to frontend
+              send(
+                "output",
+                sseEvent(sessionId, {
+                  type: "result",
+                  subtype: "success",
+                  result,
+                })
+              );
 
-            // Feed result back to model
-            conv.push({
-              role: "tool",
-              tool_call_id: tc.id,
-              content: result,
-            } as OpenAI.Chat.Completions.ChatCompletionToolMessageParam);
+              // Feed result back to model
+              conv.push({
+                role: "tool",
+                tool_call_id: tc.id,
+                content: result,
+              } as OpenAI.Chat.Completions.ChatCompletionToolMessageParam);
+            } catch (err: any) {
+              console.error(`[Tool ${tc.name}] execution failed:`, err.message);
+              const errorMsg = `Tool ${tc.name} failed: ${err.message?.slice(0, 200)}`;
+
+              // Send error result so frontend renders as agent message, not system error
+              send(
+                "output",
+                sseEvent(sessionId, {
+                  type: "result",
+                  subtype: "error",
+                  result: errorMsg,
+                })
+              );
+
+              // Feed error back to LLM so it can explain to user
+              conv.push({
+                role: "tool",
+                tool_call_id: tc.id,
+                content: JSON.stringify({ error: err.message?.slice(0, 500) }),
+              } as OpenAI.Chat.Completions.ChatCompletionToolMessageParam);
+            }
           }
         }
 

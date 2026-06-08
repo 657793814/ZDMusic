@@ -150,7 +150,14 @@ export async function getVideoInfo(bvid: string): Promise<{ cid: string; title: 
     }
   );
 
-  const json = (await res.json()) as {
+  // Detect HTML response (Bilibili security block / rate limit page)
+  const viewText = await res.text();
+  if (viewText.includes("<!DOCTYPE") || viewText.includes("<html")) {
+    console.warn(`[getVideoInfo] Bilibili returned HTML for ${bvid}`);
+    throw new Error(`Bilibili API unavailable: security block detected`);
+  }
+
+  const json = JSON.parse(viewText) as {
     code?: number;
     data?: { cid?: number; title?: string };
   };
@@ -245,7 +252,20 @@ export async function searchVideos(
     }
   );
 
-  const json = (await res.json()) as {
+  // Reject non-OK status before parsing
+  if (!res.ok) {
+    console.warn(`[searchVideos] Bilibili API returned non-OK status: ${res.status}`);
+    return { total: 0, videos: [] };
+  }
+
+  // Detect HTML response (Bilibili security block / rate limit page)
+  const text = await res.text();
+  if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+    console.warn("[searchVideos] Bilibili API returned HTML instead of JSON, likely blocked.");
+    return { total: 0, videos: [] };
+  }
+
+  const json = JSON.parse(text) as {
     code?: number;
     data?: {
       numResults?: number;
