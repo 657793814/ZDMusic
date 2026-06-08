@@ -76,9 +76,21 @@ start_server() {
     # 创建日志目录
     mkdir -p "$PROJECT_DIR/.next/dev/logs"
     
-    # 启动服务器（后台运行）
+    # 先执行构建
+    info "执行 npm run build..."
     cd "$PROJECT_DIR"
-    npm run build && npm run dev > "$LOG_FILE" 2>&1 &
+    npm run build
+    if [ $? -ne 0 ]; then
+        error "构建失败，请检查错误信息"
+        exit 1
+    fi
+    info "构建成功"
+    
+    # 启动开发服务器（后台运行）
+    npm run dev > "$LOG_FILE" 2>&1 &
+    
+    # 记录进程ID
+    echo $! > "$PID_FILE"
     
     # 等待服务器启动
     info "等待服务器启动..."
@@ -89,6 +101,7 @@ start_server() {
         info "AuraMusic 服务器已成功启动！"
         info "访问地址: http://localhost:3000"
         info "日志文件: $LOG_FILE"
+        info "进程ID: $(cat "$PID_FILE")"
     else
         error "服务器启动失败，请检查日志文件: $LOG_FILE"
         cat "$LOG_FILE"

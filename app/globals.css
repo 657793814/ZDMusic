@@ -77,6 +77,17 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes marquee-with-pause {
+  0% { transform: translateX(0); }
+  calc(100% - var(--pause-pct)) { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
 @keyframes bar-bounce {
   0%, 100% { transform: scaleY(1); }
   50% { transform: scaleY(0.4); }

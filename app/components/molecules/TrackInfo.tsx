@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import type { Track } from "@/app/lib/types";
 import { DanmakuToggle, SpectrumBars } from "@/app/components/atoms";
 import { useI18n } from "@/app/lib/i18n";
@@ -11,63 +11,48 @@ type Props = {
 };
 
 export function TrackInfo({ track, playing }: Props) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
-  const [needsMarquee, setNeedsMarquee] = useState(false);
-  const { t } = useI18n();
-
-  useEffect(() => {
-    const container = containerRef.current;
-    const text = textRef.current;
-    if (!container || !text) {
-      setNeedsMarquee(false);
-      return;
-    }
-
-    const check = () => {
-      setNeedsMarquee(text.scrollWidth > container.clientWidth);
-    };
-
-    check();
-    const ro = new ResizeObserver(check);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [track?.id, track?.title]);
-
   const hasTrack = !!track;
+
+  const containerWidth = containerRef.current?.clientWidth ?? 0;
+  const totalWidth = containerWidth + (textRef.current?.scrollWidth ?? 0);
+  const gap = 12; // gap between title and author
+  const dur = Math.max(10, (totalWidth + gap) / 60);
+  const pauseDur = Math.max(0, 5 - dur);
+  const pausePct = (pauseDur / (dur + pauseDur)) * 100;
+  const animName = pauseDur > 0
+    ? `marquee-with-pause ${dur + pauseDur}s linear infinite`
+    : "marquee 8s linear infinite";
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-baseline gap-3">
-        <div ref={containerRef} className="min-w-0 flex-1 overflow-hidden">
-          <div className={needsMarquee ? "overflow-hidden" : ""}>
+      <div
+        ref={containerRef}
+        className="relative h-[1.65rem] overflow-hidden md:h-[2rem]"
+        style={pauseDur > 0 ? { "--pause-pct": `${pausePct}%` } as React.CSSProperties : undefined}
+      >
+        <span
+          ref={textRef}
+          className="text-base font-semibold tracking-[var(--tracking-label)] md:text-lg"
+          style={{
+            fontFamily: "var(--font-body)",
+            color: "var(--color-on-surface)",
+            whiteSpace: "nowrap",
+            display: "inline-block",
+            animation: animName,
+          }}
+        >
+          {hasTrack ? track.title : t("noSignal")}
+          {hasTrack && (
             <span
-              ref={textRef}
-              className={
-                hasTrack
-                  ? "text-base font-semibold tracking-[var(--tracking-label)] md:text-lg"
-                  : "text-[13px] font-medium opacity-45"
-              }
-              style={{
-                fontFamily: "var(--font-body)",
-                color: "var(--color-on-surface)",
-                display: "inline-block",
-                whiteSpace: needsMarquee ? "nowrap" : "normal",
-                animation: needsMarquee ? "slide-up 8s linear infinite" : undefined,
-              }}
+              style={{ marginLeft: "0.75rem", fontWeight: 400, fontSize: "0.875rem", opacity: 0.7 }}
             >
-              {hasTrack ? track.title : t("noSignal")}
+              — {track.author}
             </span>
-          </div>
-        </div>
-        {hasTrack && (
-          <span
-            className="shrink-0 text-sm opacity-70"
-            style={{ fontFamily: "var(--font-body)" }}
-          >
-            {track.author}
-          </span>
-        )}
+          )}
+        </span>
       </div>
       <div className="flex items-center gap-2.5">
         <span
