@@ -17,23 +17,40 @@ const MIXIN_KEY_ENC_TAB = [
 ] as const;
 
 const UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36";
 
-const COMMON_HEADERS = {
+const COMMON_HEADERS: Record<string, string> = {
   "User-Agent": UA,
-  Accept: "application/json, text/plain, */*",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
   "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-  Origin: "https://www.bilibili.com",
-  Referer: "https://www.bilibili.com/",
+  "Accept-Encoding": "identity",
+  "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="134", "Google Chrome";v="134"',
+  "Sec-Ch-Ua-Mobile": "?0",
+  "Sec-Ch-Ua-Platform": '"macOS"',
   "Sec-Fetch-Dest": "empty",
   "Sec-Fetch-Mode": "cors",
   "Sec-Fetch-Site": "same-site",
+  "Priority": "u=1, i",
 };
+
+// Cookie header used for API requests that support cookie-based auth
+function buildCookieHeader(buvid3: string): string {
+  const parts = [`buvid3=${buvid3}`];
+  // wbi signing needs wk to be present
+  if (process.env.BILIBILI_COOKIE_WK) parts.push(`wk=${process.env.BILIBILI_COOKIE_WK}`);
+  if (process.env.BILIBILI_COOKIE_SESSDATA) parts.push(`SESSDATA=${process.env.BILIBILI_COOKIE_SESSDATA}`);
+  return parts.join("; ");
+}
 
 let cachedKeys: { imgKey: string; subKey: string; ts: number } | null = null;
 let cachedBuvid3: string | null = null;
+let buvid3FreshAt = 0;
+const BUVID3_REFRESH_INTERVAL = 10 * 60 * 1000; // refresh every 10 minutes
 let cachedVideoInfo: Record<string, { cid: string; title: string; ts: number }> | null = null;
 const VIDEO_INFO_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const REQUEST_DELAY_MIN = 800; // ms between API calls
+const REQUEST_DELAY_MAX = 2000; // ms
+let lastApiCallAt = 0;
 
 function getMixinKey(imgKey: string, subKey: string): string {
   const raw = imgKey + subKey;
@@ -64,8 +81,40 @@ function signParams(
   return signed;
 }
 
+async function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+async function delayBeforeApiCall() {
+  const now = Date.now();
+  const elapsed = now - lastApiCallAt;
+  if (elapsed < REQUEST_DELAY_MIN) {
+    await sleep(REQUEST_DELAY_MIN - elapsed + Math.random() * (REQUEST_DELAY_MAX - REQUEST_DELAY_MIN));
+  }
+  lastApiCallAt = Date.now();
+}
+
+/**
+ * Ensure we have a valid buvid3.
+ * Uses pre-configured cookie from env vars if available (best for servers).
+ * Otherwise fetches from B站首页, refreshing every 10 minutes.
+ */
 async function ensureBuvid3(): Promise<string> {
-  if (cachedBuvid3) return cachedBuvid3;
+  // If env provides full cookies, use them directly
+  if (process.env.BILIBILI_COOKIE_SESSDATA && process.env.BILIBILI_COOKIE_WK) {
+    const buvid3FromCookie = process.env.BILIBILI_COOKIE_BUVID3 || "";
+    if (buvid3FromCookie) {
+      cachedBuvid3 = buvid3FromCookie;
+      buvid3FreshAt = Date.now();
+      return cachedBuvid3;
+    }
+  }
+
+  // Auto-refresh if stale
+  if (cachedBuvid3 && Date.now() - buvid3FreshAt < BUVID3_REFRESH_INTERVAL) {
+    return cachedBuvid3;
+  }
+
   try {
     const res = await fetch("https://www.bilibili.com", {
       method: "GET",
@@ -77,11 +126,15 @@ async function ensureBuvid3(): Promise<string> {
       const match = c.match(/buvid3=([^;]+)/);
       if (match) {
         cachedBuvid3 = match[1];
+        buvid3FreshAt = Date.now();
         return cachedBuvid3;
       }
     }
   } catch { /* fallback */ }
+
+  // Fallback: generate a plausible buvid3
   cachedBuvid3 = `${crypto.randomUUID()}infoc`;
+  buvid3FreshAt = Date.now();
   return cachedBuvid3;
 }
 
@@ -92,13 +145,24 @@ async function getWbiKeys(): Promise<{ imgKey: string; subKey: string }> {
     return { imgKey: cachedKeys.imgKey, subKey: cachedKeys.subKey };
   }
   const buvid3 = await ensureBuvid3();
+  await delayBeforeApiCall();
+
   const res = await fetch("https://api.bilibili.com/x/web-interface/nav", {
     headers: {
       ...COMMON_HEADERS,
-      Cookie: `buvid3=${buvid3}`,
+      Cookie: buildCookieHeader(buvid3),
     },
   });
-  const json = (await res.json()) as {
+
+  // Detect HTML response
+  const navText = await res.text();
+  if (navText.includes("<!DOCTYPE") || navText.includes("<html")) {
+    console.warn("[getWbiKeys] Bilibili returned HTML, using fallback keys");
+    cachedKeys = { imgKey: "", subKey: "", ts: Date.now() };
+    return { imgKey: "", subKey: "" };
+  }
+
+  const json = JSON.parse(navText) as {
     data?: {
       wbi_img?: { img_url?: string; sub_url?: string };
     };
@@ -131,6 +195,7 @@ export async function getVideoInfo(bvid: string): Promise<{ cid: string; title: 
     if (Date.now() - cached.ts < VIDEO_INFO_TTL) return cached;
   }
 
+  await delayBeforeApiCall();
   const { imgKey, subKey } = await getWbiKeys();
   const mixinKey = getMixinKey(imgKey, subKey);
   const buvid3 = await ensureBuvid3();
@@ -145,7 +210,7 @@ export async function getVideoInfo(bvid: string): Promise<{ cid: string; title: 
     {
       headers: {
         ...COMMON_HEADERS,
-        Cookie: `buvid3=${buvid3}`,
+        Cookie: buildCookieHeader(buvid3),
       },
     }
   );
@@ -182,6 +247,7 @@ export async function getDanmaku(cid: string): Promise<DanmakuItem[]> {
     if (Date.now() - cached.ts < DANMAKU_TTL) return cached.items;
   }
 
+  await delayBeforeApiCall();
   const buvid3 = await ensureBuvid3();
   const oid = parseInt(cid, 10);
 
@@ -190,7 +256,7 @@ export async function getDanmaku(cid: string): Promise<DanmakuItem[]> {
     {
       headers: {
         ...COMMON_HEADERS,
-        Cookie: `buvid3=${buvid3}`,
+        Cookie: buildCookieHeader(buvid3),
       },
     }
   );
@@ -230,6 +296,7 @@ export async function searchVideos(
   keyword: string,
   page = 1
 ): Promise<{ total: number; videos: BiliVideo[] }> {
+  await delayBeforeApiCall();
   const { imgKey, subKey } = await getWbiKeys();
   const mixinKey = getMixinKey(imgKey, subKey);
   const buvid3 = await ensureBuvid3();
@@ -247,7 +314,7 @@ export async function searchVideos(
     {
       headers: {
         ...COMMON_HEADERS,
-        Cookie: `buvid3=${buvid3}`,
+        Cookie: buildCookieHeader(buvid3),
       },
     }
   );
