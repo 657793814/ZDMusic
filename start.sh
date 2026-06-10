@@ -53,20 +53,39 @@ check_dependencies() {
 
 # 停止正在运行的服务器
 stop_server() {
-    info "检查端口 3000 占用情况..."
+    info "检查并停止当前项目的服务器..."
     
-    # 停止可能存在的 Next.js 进程
-    pkill -f "next dev" 2>/dev/null || true
-    
-    # 等待进程停止
-    sleep 2
-    
-    # 使用 fuser 检查端口占用（更可靠）
-    if command -v fuser &> /dev/null; then
-        fuser -k 3000/tcp 2>/dev/null || true
+    # 优先使用 PID 文件停止进程（只针对当前项目）
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat "$PID_FILE")
+        if kill -0 "$PID" 2>/dev/null; then
+            info "通过 PID 文件终止进程 $PID..."
+            kill "$PID" 2>/dev/null || true
+            # 等待进程停止
+            sleep 2
+            # 如果进程还在运行，强制终止
+            if kill -0 "$PID" 2>/dev/null; then
+                info "强制终止进程 $PID..."
+                kill -9 "$PID" 2>/dev/null || true
+            fi
+        fi
+        rm -f "$PID_FILE"
     fi
     
-    info "端口清理完成"
+    # 检查当前项目目录下是否还有残留的 next dev 进程（通过 cwd 判断）
+    # 避免影响其他项目
+    CURRENT_PID=$(pgrep -f "next dev" | head -n 1)
+    if [ -n "$CURRENT_PID" ]; then
+        # 获取进程的工作目录
+        PROCESS_CWD=$(readlink /proc/"$CURRENT_PID"/cwd 2>/dev/null || true)
+        if [ "$PROCESS_CWD" = "$PROJECT_DIR" ]; then
+            info "终止当前项目的 next dev 进程 $CURRENT_PID..."
+            kill "$CURRENT_PID" 2>/dev/null || true
+            sleep 1
+        fi
+    fi
+    
+    info "服务器停止完成"
 }
 
 # 启动开发服务器
