@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { createReadStream, statSync } from "fs";
+import { unlink, readdir, rmdir } from "fs/promises";
+import path from "path";
 import { resolveMusicPath } from "@/app/lib/tracks";
 
 export const dynamic = "force-dynamic";
@@ -76,4 +78,36 @@ export async function GET(
       "Accept-Ranges": "bytes",
     },
   });
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path: segments } = await params;
+  const relativePath = segments.map(decodeURIComponent).join("/");
+  const fullPath = resolveMusicPath(relativePath);
+
+  if (!fullPath) {
+    return new Response("forbidden", { status: 403 });
+  }
+
+  try {
+    await unlink(fullPath);
+
+    // 如果父目录为空，也清理掉
+    const parent = path.dirname(fullPath);
+    try {
+      const remaining = await readdir(parent);
+      if (remaining.length === 0) {
+        await rmdir(parent);
+      }
+    } catch {
+      // 忽略父目录清理失败
+    }
+
+    return new Response(null, { status: 204 });
+  } catch (err) {
+    return new Response("not found", { status: 404 });
+  }
 }

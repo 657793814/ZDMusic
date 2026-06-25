@@ -11,6 +11,7 @@ export function Playlist() {
   const { t } = useI18n();
   const [filter, setFilter] = useState("");
   const [localTracks, setLocalTracks] = useState<Track[] | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const fetching = useRef(false);
 
   const load = useCallback(() => {
@@ -217,19 +218,19 @@ export function Playlist() {
                   aria-label={t("remove")}
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeTrack(tr.id);
+                    setConfirmingId(tr.id);
                   }}
                   className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors hover:border-[color:var(--color-error)] hover:text-[color:var(--color-error)]"
                   style={{
                     borderColor: "var(--color-outline-dim)",
                     color: "var(--color-outline)",
-                    opacity: active ? 0.6 : 0,
+                    opacity: active ? 0.8 : 0.35,
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.opacity = "1";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = active ? "0.6" : "0";
+                    e.currentTarget.style.opacity = active ? "0.8" : "0.35";
                   }}
                 >
                   <svg
@@ -250,6 +251,72 @@ export function Playlist() {
           })
         )}
       </div>
+
+      {/* 删除确认弹窗 */}
+      {confirmingId && (() => {
+        const track = allTracks.find((t) => t.id === confirmingId);
+        if (!track) return null;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
+            onClick={() => setConfirmingId(null)}
+          >
+            <div
+              className="mx-4 w-full max-w-sm rounded-2xl border p-5 shadow-2xl"
+              style={{
+                backgroundColor: "var(--color-surface-dim)",
+                borderColor: "var(--color-outline-dim)",
+                fontFamily: "var(--font-body)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="mb-1 text-[11px] font-semibold tracking-[var(--tracking-label)] uppercase opacity-50">
+                {t("remove")}
+              </p>
+              <p className="mb-5 text-[14px] leading-snug" style={{ color: "var(--color-on-surface)" }}>
+                确认删除 <span className="font-semibold">"{track.title}"</span>？
+                <br />
+                <span className="text-[12px] opacity-50">本地文件也将被永久删除</span>
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingId(null)}
+                  className="rounded-full border px-4 py-1.5 text-[12px] transition-colors hover:opacity-80"
+                  style={{
+                    borderColor: "var(--color-outline-dim)",
+                    color: "var(--color-outline)",
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setConfirmingId(null);
+                    await fetch(track.url, { method: "DELETE" });
+                    removeTrack(track.id);
+                    // 乐观更新 localTracks，立即从 UI 移除，不等 load() 回来
+                    setLocalTracks((prev) =>
+                      prev ? prev.filter((t) => t.id !== track.id) : prev
+                    );
+                    load();
+                  }}
+                  className="rounded-full px-4 py-1.5 text-[12px] font-semibold text-white transition-opacity hover:opacity-80"
+                  style={{
+                    backgroundColor: "var(--color-error, #ef4444)",
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

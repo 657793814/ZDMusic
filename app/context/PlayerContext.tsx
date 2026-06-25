@@ -150,35 +150,39 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const removeTrack = useCallback(
     (trackId: string) => {
-      setPlaylist((prev) => {
-        const rmIdx = prev.findIndex((t) => t.id === trackId);
-        if (rmIdx < 0) return prev;
-        const next = [...prev];
-        next.splice(rmIdx, 1);
-        playlistRef.current = next;
+      const prev = playlistRef.current;
+      const rmIdx = prev.findIndex((t) => t.id === trackId);
+      if (rmIdx < 0) return;
 
-        const curIdx = indexRef.current;
+      const next = [...prev];
+      next.splice(rmIdx, 1);
 
-        if (rmIdx === curIdx) {
-          if (next.length === 0) {
-            setIndex(-1);
-            indexRef.current = -1;
-            pause();
-          } else {
-            const newIdx = Math.min(rmIdx, next.length - 1);
-            setIndex(newIdx);
-            indexRef.current = newIdx;
-            const t = next[newIdx];
-            if (t) playTrack(t);
-          }
-        } else if (rmIdx < curIdx) {
-          const newIdx = curIdx - 1;
-          setIndex(newIdx);
+      const curIdx = indexRef.current;
+
+      // 先更新 ref（同步）
+      playlistRef.current = next;
+
+      // 再批量更新 React state
+      setPlaylist(next);
+
+      if (rmIdx === curIdx) {
+        if (next.length === 0) {
+          indexRef.current = -1;
+          setIndex(-1);
+          pause();
+        } else {
+          const newIdx = Math.min(rmIdx, next.length - 1);
           indexRef.current = newIdx;
+          setIndex(newIdx);
+          const t = next[newIdx];
+          if (t) playTrack(t);
         }
-
-        return next;
-      });
+      } else if (rmIdx < curIdx) {
+        const newIdx = curIdx - 1;
+        indexRef.current = newIdx;
+        setIndex(newIdx);
+      }
+      // rmIdx > curIdx: 后面的歌被删了，当前索引不变，无需处理
     },
     [playTrack, pause]
   );
