@@ -1,7 +1,6 @@
 "use client";
 
-import { DanmakuOverlay, DanmakuToggle, Logo, ModeSwitch } from "@/app/components/atoms";
-import { TrackInfo } from "@/app/components/molecules/TrackInfo";
+import { AmbientBackground, DanmakuOverlay, FullScreenVisualizer, Logo, ModeSwitch } from "@/app/components/atoms";
 import {
   AgentChat,
   ClockPanel,
@@ -9,14 +8,43 @@ import {
   Playlist,
   StatusBar,
 } from "@/app/components/organisms";
+import { usePlayer } from "@/app/context/PlayerContext";
 import { useI18n } from "@/app/lib/i18n";
+import { useEffect } from "react";
 
 export default function Home() {
+  const { analyser, state, vizReady, flipped, toggleFlip } = usePlayer();
   const { lang, cycleLang } = useI18n();
+
+  // ESC 退出全屏模式
+  useEffect(() => {
+    if (!flipped) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        toggleFlip();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [flipped, toggleFlip]);
 
   return (
     <>
+      {/* 全屏沉浸模式 */}
+      {flipped && (
+        <FullScreenVisualizer
+          analyser={analyser}
+          playing={state.playing}
+          onExit={toggleFlip}
+        />
+      )}
+
+      {/* 正常 UI（点击按钮显示全屏模式，正常 UI 自动隐藏） */}
+      <AmbientBackground key={vizReady ? "bg-on" : "bg-off"} analyser={analyser} playing={state.playing} />
+
       <DanmakuOverlay />
+
       <div className="flex min-h-[100dvh] items-center justify-center p-3 text-[color:var(--color-on-surface)] md:p-6 lg:p-8">
         <div
           className="flex h-[min(98dvh,75rem)] w-full max-w-7xl flex-col overflow-hidden rounded-2xl"
@@ -52,15 +80,15 @@ export default function Home() {
             </nav>
           </header>
 
-          <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 md:grid md:grid-cols-2 md:gap-6 md:p-6">
+          <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 md:grid md:grid-cols-2 md:gap-3 md:p-4">
             {/* 左侧：Player + Playlist */}
-            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden">
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
               <Player />
               <Playlist />
             </div>
 
             {/* 右侧：ClockPanel + AgentChat */}
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
               <div className="shrink-0"><ClockPanel /></div>
               <AgentChat />
             </div>

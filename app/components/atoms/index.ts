@@ -1,6 +1,8 @@
+export { AmbientBackground } from "./AmbientBackground";
 export { Badge } from "./Badge";
 export { DanmakuOverlay } from "./DanmakuOverlay";
 export { DanmakuToggle } from "./DanmakuToggle";
+export { FullScreenVisualizer } from "./FullScreenVisualizer";
 export { GlowDot } from "./GlowDot";
 export { Logo } from "./Logo";
 export { ModeSwitch } from "./ModeSwitch";

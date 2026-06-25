@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import type { Track } from "@/app/lib/types";
-import { DanmakuToggle, SpectrumBars } from "@/app/components/atoms";
+import { DanmakuToggle } from "@/app/components/atoms";
 import { useI18n } from "@/app/lib/i18n";
 
 type Props = {
@@ -27,10 +27,10 @@ export function TrackInfo({ track, playing }: Props) {
     : "marquee 8s linear infinite";
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-1">
       <div
         ref={containerRef}
-        className="relative h-[1.65rem] overflow-hidden md:h-[2rem]"
+        className="relative h-[1.1rem] overflow-hidden md:h-[1.35rem]"
         style={pauseDur > 0 ? { "--pause-pct": `${pausePct}%` } as React.CSSProperties : undefined}
       >
         <span
@@ -75,7 +75,6 @@ export function TrackInfo({ track, playing }: Props) {
           />
           {playing ? t("playing") : t("paused")}
         </span>
-        <SpectrumBars active={playing} muted={!hasTrack} />
         <DanmakuToggle />
       </div>
     </div>

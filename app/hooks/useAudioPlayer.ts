@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useAudioPlayer(options?: { onEnded?: () => void }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const onEndedRef = useRef(options?.onEnded);
   useEffect(() => {
     onEndedRef.current = options?.onEnded;
@@ -14,9 +15,15 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.8);
+  const volumeRef = useRef(0.8);
+
+  const setAudioRef = useCallback((el: HTMLAudioElement | null) => {
+    audioRef.current = el;
+    setAudioElement(el);
+  }, []);
 
   useEffect(() => {
-    const el = audioRef.current;
+    const el = audioElement;
     if (!el) return;
 
     const syncDuration = () => setDuration(Number.isFinite(el.duration) ? el.duration : 0);
@@ -40,6 +47,7 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
     el.addEventListener("ended", syncEnded);
     el.addEventListener("volumechange", syncVol);
 
+    el.volume = volumeRef.current;
     setVolumeState(el.volume);
     syncDuration();
     syncProgress();
@@ -54,32 +62,22 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
       el.removeEventListener("ended", syncEnded);
       el.removeEventListener("volumechange", syncVol);
     };
-  }, []);
-
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume;
-  }, [volume]);
+  }, [audioElement]);
 
   const play = useCallback(async () => {
     const el = audioRef.current;
     if (!el) return;
-    try {
-      await el.play();
-    } catch {
-      /* autoplay blocked or no source */
-    }
+    try { await el.play(); } catch { /* */ }
   }, []);
 
-  const pause = useCallback(() => {
-    audioRef.current?.pause();
-  }, []);
+  const pause = useCallback(() => { audioRef.current?.pause(); }, []);
 
   const toggle = useCallback(async () => {
     const el = audioRef.current;
     if (!el) return;
     if (el.paused) await play();
     else pause();
-  }, [pause, play]);
+  }, [play, pause]);
 
   const seek = useCallback((t: number) => {
     const el = audioRef.current;
@@ -90,6 +88,7 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
 
   const setVolume = useCallback((n: number) => {
     const v = Math.max(0, Math.min(1, n));
+    volumeRef.current = v;
     setVolumeState(v);
     if (audioRef.current) audioRef.current.volume = v;
   }, []);
@@ -101,18 +100,14 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
     el.load();
     setProgress(0);
     setDuration(0);
-
-    // Optimistically set playing=true. el.load() fires a "pause" event which would
-    // immediately reset it to false; if play() ultimately fails, we catch it below.
     setPlaying(true);
-
-    el.play().catch(() => {
-      setPlaying(false);
-    });
+    el.play().catch(() => { setPlaying(false); });
   }, []);
 
   return {
     audioRef,
+    audioElement,
+    setAudioRef,
     playing,
     progress,
     duration,
