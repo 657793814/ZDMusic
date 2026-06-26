@@ -1,17 +1,44 @@
-// 🫧 NEBULA BIRTH — 星云孕育
+// 🫧 NEBULA BIRTH — 星云孕育 (v2)
 import type { PresetModule } from "./types";
 
-interface NBGasmass{x:number;y:number;size:number;hue:number;alpha:number;driftX:number;driftY:number;phase:number}
-interface NBFilament{startAngle:number;endAngle:number;length:number;width:number;hue:number;bright:number;phase:number}
-interface NBDustPart{angle:number;radius:number;size:number;bright:number;speed:number}
+interface NBGasmass {
+  x:number;y:number;size:number;hue:number;alpha:number;
+  vx:number;vy:number;phase:number;pulseSpeed:number;
+}
+interface NBStream {
+  angle:number;progress:number;speed:number;width:number;hue:number;bright:number;
+}
+interface NBDustPart {
+  angle:number;radius:number;size:number;bright:number;speed:number;
+}
+interface NBInfall {
+  angle:number;progress:number;speed:number;size:number;hue:number;bright:number;
+}
 
-const GAS_COUNT=30,FILAMENT_COUNT=25,DUST_COUNT=300
+const GAS=40,STREAMS=12,DUST=400,INFALL=25
 const ra=(a:number,b:number)=>a+Math.random()*(b-a)
 const ri=(a:number,b:number)=>Math.floor(ra(a,b+1))
 
-function makeGas():NBGasmass{return{x:ra(-0.8,0.8),y:ra(-0.8,0.8),size:ra(0.15,0.4),hue:ri(200,330),alpha:ra(0.04,0.12),driftX:ra(-0.001,0.001),driftY:ra(-0.001,0.001),phase:ra(0,Math.PI*2)}}
-function makeFilament():NBFilament{return{startAngle:ra(0,Math.PI*2),endAngle:ra(0,Math.PI*2),length:ra(0.1,0.4),width:ra(0.005,0.02),hue:ri(250,330),bright:ra(0.1,0.4),phase:ra(0,Math.PI*2)}}
-function makeDust():NBDustPart{return{angle:ra(0,Math.PI*2),radius:ra(0.05,0.6),size:ra(0.3,1.5),bright:ra(0.1,0.5),speed:ra(0.002,0.008)}}
+function makeGas():NBGasmass{
+  const a=ra(0,Math.PI*2),r=ra(0.1,0.95)
+  return{
+    x:Math.cos(a)*r,y:Math.sin(a)*r*0.6,size:ra(0.15,0.55),
+    hue:ri(200,340),alpha:ra(0.08,0.25),vx:-r*ra(0.0003,0.002),
+    vy:ra(-0.0005,0.0005),phase:ra(0,Math.PI*2),pulseSpeed:ra(0.02,0.06),
+  }
+}
+function makeStream():NBStream{
+  return{angle:ra(0,Math.PI*2),progress:ra(0,0.5),speed:ra(0.003,0.008),
+    width:ra(0.015,0.04),hue:ri(220,300),bright:ra(0.3,0.7)}
+}
+function makeDust():NBDustPart{
+  return{angle:ra(0,Math.PI*2),radius:ra(0.05,0.7),size:ra(0.3,1.5),
+    bright:ra(0.15,0.5),speed:ra(0.001,0.006)}
+}
+function makeInfall():NBInfall{
+  return{angle:ra(0,Math.PI*2),progress:Math.random()*0.5,
+    speed:ra(0.005,0.015),size:ra(1,3.5),hue:ri(200,300),bright:ra(0.3,0.8)}
+}
 
 export const preset:PresetModule={
   definition:{id:"nebula-birth",name:"星云孕育",icon:"🫧",description:"原恒星凝聚诞生"},
@@ -19,12 +46,13 @@ export const preset:PresetModule={
   createRenderer(canvas,analyser,playing){
     const ctx=canvas.getContext("2d")!
     let stopped=false,raf:number
-    const gasMasses=Array.from({length:GAS_COUNT},()=>makeGas())
-    const filaments=Array.from({length:FILAMENT_COUNT},()=>makeFilament())
-    const dust=Array.from({length:DUST_COUNT},()=>makeDust())
+    const gasLumps=Array.from({length:GAS},()=>makeGas())
+    const streams=Array.from({length:STREAMS},()=>makeStream())
+    const dustParts=Array.from({length:DUST},()=>makeDust())
+    const infalls=Array.from({length:INFALL},()=>makeInfall())
 
     const freq=new Uint8Array(analyser?.frequencyBinCount??128)
-    let avgE=0,bass=0,mid=0,frame=0,coreLife=0
+    let avgE=0,bass=0,mid=0,frame=0,flash=0
 
     function resize(){
       const dpr=window.devicePixelRatio||1
@@ -45,93 +73,139 @@ export const preset:PresetModule={
         mid=mid*0.7+(ms/mc/255)*0.3
       }else{avgE*=0.97;bass*=0.95;mid*=0.95}
 
-      coreLife=Math.min(1,coreLife+0.002*(1+bass*3))
+      // bass beat → flash
+      if(bass>0.35&&bass>avgE*1.4)flash=Math.min(1,flash+bass*1.2)
+      flash*=0.9
 
       // 背景
       ctx.clearRect(0,0,W,H)
-      const bg=ctx.createRadialGradient(CX,CY,0,CX,CY,SS*0.7)
-      bg.addColorStop(0,"rgba(8,5,15,1)");bg.addColorStop(0.5,"rgba(12,8,20,1)");bg.addColorStop(1,"rgba(5,3,10,1)")
+      const bg=ctx.createRadialGradient(CX,CY,0,CX,CY,SS*0.8)
+      bg.addColorStop(0,"rgba(12,4,20,1)");bg.addColorStop(0.3,"rgba(18,8,28,1)")
+      bg.addColorStop(0.6,"rgba(10,5,18,1)");bg.addColorStop(1,"rgba(4,2,8,1)")
       ctx.fillStyle=bg;ctx.fillRect(0,0,W,H)
 
-      // 背景星云气体
-      for(const g of gasMasses){
-        g.x+=g.driftX*(1+bass*0.5);g.y+=g.driftY*(1+mid*0.5)
-        const gx=CX+g.x*SS*0.4,gy=CY+g.y*SS*0.4
-        const gs=g.size*SS*0.5
-        const gA=g.alpha*(0.5+avgE*0.5)
-        if(gA<0.003)continue
+      // ── 气体云 — 向中心坍缩 ──
+      for(const g of gasLumps){
+        const d=Math.sqrt(g.x*g.x+g.y*g.y)
+        if(d>0.02){
+          const force=d*0.0004*(1+bass)
+          g.x-=g.x*force;g.y-=g.y*force
+        }else{
+          const a=ra(0,Math.PI*2),r=ra(0.5,0.9)
+          g.x=Math.cos(a)*r;g.y=Math.sin(a)*r*0.6
+        }
+        g.x+=Math.sin(g.phase+frame*g.pulseSpeed)*0.0004
+        g.y+=Math.cos(g.phase*1.3+frame*g.pulseSpeed*0.7)*0.0004
+
+        const gx=CX+g.x*SS*0.45,gy=CY+g.y*SS*0.45
+        const gs=g.size*SS*0.5*(1+bass*0.15)
+        const pulse=0.6+0.4*Math.sin(frame*g.pulseSpeed+g.phase)
+        const gA=g.alpha*(0.3+0.7*avgE)*pulse
+        if(gA<0.005)continue
         const gg=ctx.createRadialGradient(gx,gy,0,gx,gy,gs)
-        gg.addColorStop(0,`hsla(${g.hue},50%,40%,${gA})`)
-        gg.addColorStop(0.5,`hsla(${g.hue+10},40%,30%,${gA*0.5})`)
+        gg.addColorStop(0,`hsla(${g.hue},60%,55%,${gA})`)
+        gg.addColorStop(0.5,`hsla(${g.hue+15},50%,40%,${gA*0.5})`)
         gg.addColorStop(1,"hsla(0,0%,0%,0)")
         ctx.fillStyle=gg;ctx.beginPath();ctx.arc(gx,gy,gs,0,Math.PI*2);ctx.fill()
       }
 
-      // 气体丝线向中心汇聚
-      for(const f of filaments){
-        f.phase+=0.01*(1+bass+mid*0.3)
-        const spread=Math.min(SS*0.4,f.length*SS*(0.3+coreLife*0.5))
-        const fA=f.bright*(0.1+avgE*0.3+mid*0.2)*(0.3+coreLife*0.5)
-        if(fA<0.005)continue
-        const segs=20
+      // ── 吸积流 — 物质从外缘流向中心 ──
+      for(const s of streams){
+        s.progress+=s.speed*(1+bass*2.5)
+        if(s.progress>1){s.progress=0;s.angle=ra(0,Math.PI*2);s.speed=ra(0.003,0.01)}
+        const maxR=SS*0.38,curR=maxR*(1-s.progress)
+        const sx=CX+Math.cos(s.angle)*curR,sy=CY+Math.sin(s.angle)*curR*0.5
+        const dotA=s.bright*(0.4+0.6*avgE)*(0.5+0.5*flash)
+        const dotS=Math.max(1,s.width*SS*0.08*(1+bass))
+        // head glow
+        const sg=ctx.createRadialGradient(sx,sy,0,sx,sy,dotS*4)
+        sg.addColorStop(0,`hsla(${s.hue},70%,60%,${dotA*0.3})`)
+        sg.addColorStop(1,"hsla(0,0%,0%,0)")
+        ctx.fillStyle=sg;ctx.beginPath();ctx.arc(sx,sy,dotS*4,0,Math.PI*2);ctx.fill()
+        // head dot
+        ctx.beginPath();ctx.arc(sx,sy,dotS,0,Math.PI*2)
+        ctx.fillStyle=`hsla(${s.hue},80%,65%,${dotA})`;ctx.fill()
+        // tail line
         ctx.beginPath()
-        for(let si=0;si<=segs;si++){
-          const st=si/segs
-          const angle=f.startAngle+(f.endAngle-f.startAngle)*st
-          const dist=spread*st
-          const wobble=Math.sin(st*10+f.phase)*dist*0.05
-          const px=CX+Math.cos(angle+wobble)*dist
-          const py=CY+Math.sin(angle+wobble)*dist*0.6
-          if(si===0)ctx.moveTo(px,py);else ctx.lineTo(px,py)
-        }
-        ctx.strokeStyle=`hsla(${f.hue},60%,50%,${fA})`
-        ctx.lineWidth=Math.max(0.5,f.width*SS*0.1);ctx.stroke()
+        ctx.moveTo(CX+Math.cos(s.angle)*maxR,CY+Math.sin(s.angle)*maxR*0.5)
+        ctx.lineTo(sx,sy)
+        ctx.strokeStyle=`hsla(${s.hue},60%,50%,${dotA*0.25})`
+        ctx.lineWidth=Math.max(0.5,s.width*SS*0.04);ctx.stroke()
       }
 
-      // 尘埃盘
-      ctx.save();ctx.translate(CX,CY)
-      ctx.scale(1.2,0.5);ctx.rotate(frame*0.003*(1+bass))
-      for(let ri2=0;ri2<2;ri2++){
-        for(let i=0;i<60;i++){
-          const t=i/60
-          const angle=t*Math.PI*2
-          const r=SS*(0.08+coreLife*0.15+ri2*0.06)
-          const pulse=0.5+Math.sin(angle*6+frame*0.02+ri2)*0.5
-          const dA=(0.02+avgE*0.04+bass*0.02)*(1-ri2*0.3)*pulse
-          if(dA<0.005)continue
-          ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(angle)*r,Math.sin(angle)*r)
-          ctx.fillStyle=`hsla(${260+ri2*20},40%,${30+coreLife*30}%,${dA})`
+      // ── 坠入粒子 — 细小光点冲向中心 ──
+      for(const inf of infalls){
+        inf.progress+=inf.speed*(1+bass*2)
+        if(inf.progress>1){inf.progress=0;inf.angle=ra(0,Math.PI*2);inf.speed=ra(0.005,0.016)}
+        const maxR=SS*0.35,r2=maxR*(1-inf.progress)
+        const ix=CX+Math.cos(inf.angle)*r2,iy=CY+Math.sin(inf.angle)*r2*0.5
+        const iA=inf.bright*(0.3+0.7*avgE)*Math.sin(inf.progress*Math.PI)
+        if(iA<0.01)continue
+        const iz=inf.size*(0.3+avgE*0.6)*(0.3+0.7*(1-inf.progress))
+        ctx.beginPath();ctx.arc(ix,iy,iz,0,Math.PI*2)
+        ctx.fillStyle=`hsla(${inf.hue},70%,${55+20*avgE}%,${iA})`;ctx.fill()
+      }
+
+      // ── 吸积盘（尘埃环） ──
+      ctx.save();ctx.translate(CX,CY);ctx.scale(1.3,0.5)
+      const rot=frame*0.004*(1+bass*0.5)
+      for(let ring=0;ring<3;ring++){
+        const ringR=SS*(0.06+ring*0.065+bass*0.012),hue=250+ring*15,off=ring*2.1
+        for(let i=0;i<70;i++){
+          const t=i/70,a=t*Math.PI*2+rot+off
+          const pulse=0.4+0.6*Math.sin(a*6+off)
+          const dA=(0.025+avgE*0.05+bass*0.025)*pulse*(1-ring*0.2)
+          if(dA<0.003)continue
+          const wr=ringR*(1+0.03*Math.sin(a*3+off))
+          ctx.beginPath()
+          ctx.moveTo(Math.cos(a)*wr,Math.sin(a)*wr)
+          ctx.arc(0,0,wr,a,a+0.12)
+          ctx.strokeStyle=`hsla(${hue},50%,${35+25*avgE}%,${dA})`
+          ctx.lineWidth=Math.max(0.3,SS*0.003*(1+bass));ctx.stroke()
         }
       }
       ctx.restore()
 
-      // 尘埃粒子
-      for(const d of dust){
-        d.angle+=d.speed*(1+bass+coreLife)
-        const dr=d.radius*SS*(0.3+coreLife*0.3)
+      // ── 尘埃粒子 ──
+      for(const d of dustParts){
+        d.angle+=d.speed*(1+bass*0.8)
+        const dr=d.radius*SS*0.45*(1-bass*0.05)
         const dx=CX+Math.cos(d.angle+frame*0.005*(1+bass))*dr
-        const dy=CY+Math.sin(d.angle+frame*0.005*(1+bass))*dr*0.5
-        const dA=d.bright*(0.1+avgE*0.3)*(0.3+coreLife*0.5)
-        if(dA<0.005)continue
-        const sz=d.size*(0.3+avgE*0.5)
+        const dy=CY+Math.sin(d.angle+frame*0.005*(1+bass))*dr*0.45
+        const dA=d.bright*(0.2+avgE*0.4)
+        if(dA<0.003)continue
+        const sz=d.size*(0.3+avgE*0.6)
         ctx.beginPath();ctx.arc(dx,dy,Math.max(0.2,sz),0,Math.PI*2)
-        ctx.fillStyle=`hsla(${280+d.bright*40},50%,${40+coreLife*30}%,${dA})`
-        ctx.fill()
+        ctx.fillStyle=`hsla(${270+d.bright*50},50%,${45+avgE*20}%,${dA})`;ctx.fill()
       }
 
-      // 核心原恒星
-      const coreA=0.05+coreLife*(0.3+bass*0.4+avgE*0.2)
-      const coreR=SS*(0.02+coreLife*0.04)*(1+bass*0.3)
-      const cg=ctx.createRadialGradient(CX,CY,0,CX,CY,coreR*4)
-      cg.addColorStop(0,`rgba(255,255,255,${coreA})`)
-      cg.addColorStop(0.2,`hsla(40,80%,70%,${coreA*0.7})`)
-      cg.addColorStop(0.5,`hsla(20,70%,50%,${coreA*0.3})`)
-      cg.addColorStop(0.8,`hsla(330,60%,40%,${coreA*0.1})`)
+      // ── 核心原恒星 ──
+      const coreA=0.15+flash*0.6+avgE*0.3+bass*0.25
+      const coreR=SS*(0.015+bass*0.015+avgE*0.01+flash*0.02)
+      const outerR=coreR*(4+flash*3)
+      const cg=ctx.createRadialGradient(CX,CY,0,CX,CY,outerR)
+      cg.addColorStop(0,`rgba(255,240,220,${Math.min(1,coreA)})`)
+      cg.addColorStop(0.15,`hsla(40,90%,75%,${coreA*0.7})`)
+      cg.addColorStop(0.4,`hsla(25,80%,55%,${coreA*0.3})`)
+      cg.addColorStop(0.7,`hsla(330,70%,40%,${coreA*0.1})`)
       cg.addColorStop(1,"rgba(0,0,0,0)")
-      ctx.fillStyle=cg;ctx.beginPath();ctx.arc(CX,CY,coreR*4,0,Math.PI*2);ctx.fill()
-      ctx.beginPath();ctx.arc(CX,CY,Math.max(1,coreR),0,Math.PI*2)
-      ctx.fillStyle=`rgba(255,240,200,${coreA})`
-      ctx.fill()
+      ctx.fillStyle=cg;ctx.beginPath();ctx.arc(CX,CY,outerR,0,Math.PI*2);ctx.fill()
+      // 内核
+      ctx.beginPath();ctx.arc(CX,CY,Math.max(1,coreR*0.8),0,Math.PI*2)
+      ctx.fillStyle=`rgba(255,250,240,${Math.min(1,coreA*1.2)})`;ctx.fill()
+
+      // ── 闪焰光晕（bass 闪爆时） ──
+      if(flash>0.1){
+        for(let i=0;i<6;i++){
+          const fa=(i/6)*Math.PI*2+frame*0.01
+          const fl=coreR*6*flash*(0.5+0.5*Math.sin(i*1.7))
+          ctx.beginPath();ctx.moveTo(CX,CY)
+          ctx.quadraticCurveTo(CX+Math.cos(fa-0.1)*fl,CY+Math.sin(fa-0.1)*fl*0.5,
+            CX+Math.cos(fa)*fl*1.2,CY+Math.sin(fa)*fl*1.2*0.5)
+          ctx.quadraticCurveTo(CX+Math.cos(fa+0.1)*fl,CY+Math.sin(fa+0.1)*fl*0.5,CX,CY)
+          ctx.fillStyle=`hsla(40,80%,70%,${flash*0.15})`;ctx.fill()
+        }
+      }
 
       // --- 能量柱 ---
       if(analyser&&playing&&freq.length>0){

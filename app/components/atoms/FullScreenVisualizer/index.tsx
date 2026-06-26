@@ -21,6 +21,7 @@ type Props = {
 export function FullScreenVisualizer({ analyser, playing, onExit }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [currentId, setCurrentId] = useState<string>(() => {
     if (typeof window === "undefined") return "";
@@ -31,6 +32,17 @@ export function FullScreenVisualizer({ analyser, playing, onExit }: Props) {
   const [pickerHover, setPickerHover] = useState(false);
   const definitions = getPresetDefinitions();
   const currentDef = getPresetDefinition(currentId);
+
+  // 下拉打开时锚点到当前选中效果
+  useEffect(() => {
+    if (!showPicker) return;
+    // microtask 确保 DOM 已渲染
+    const id = setTimeout(() => {
+      const el = dropdownRef.current?.querySelector(`[data-preset-id="${currentId}"]`);
+      (el as HTMLElement | null)?.scrollIntoView({ block: "nearest" });
+    }, 0);
+    return () => clearTimeout(id);
+  }, [showPicker, currentId]);
 
   // 预设切换
   const switchPreset = useCallback((id: string) => {
@@ -134,6 +146,7 @@ export function FullScreenVisualizer({ analyser, playing, onExit }: Props) {
           {/* 预设选择面板 */}
           {showPicker && (
             <div
+              ref={dropdownRef}
               className="absolute top-10 left-0 overflow-hidden rounded-xl"
               style={{
                 backgroundColor: "rgba(10,10,15,0.92)",
@@ -163,6 +176,7 @@ export function FullScreenVisualizer({ analyser, playing, onExit }: Props) {
                   key={def.id}
                   type="button"
                   onClick={() => switchPreset(def.id)}
+                  data-preset-id={def.id}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12px] transition-colors hover:bg-white/10"
                   style={{
                     color:

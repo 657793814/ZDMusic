@@ -1,4 +1,4 @@
-// ⚡ PULSAR — 脉冲星
+// ⚡ PULSAR — 脉冲星（增强版）
 import type { PresetModule } from "./types";
 
 interface PSStar{x:number;y:number;z:number;size:number;hue:number;twP:number;twS:number}
@@ -6,7 +6,6 @@ interface PSWave{angle:number;life:number;maxRadius:number;speed:number;hue:numb
 const STAR_COUNT=500,WAVE_COUNT=5
 const ra=(a:number,b:number)=>a+Math.random()*(b-a)
 const ri=(a:number,b:number)=>Math.floor(ra(a,b+1))
-const sst=(e0:number,e1:number,x:number)=>{const t=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return t*t*(3-2*t)}
 function makeStar():PSStar{return{x:ra(-1.5,1.5),y:ra(-1.5,1.5),z:ra(0.5,8),size:ra(0.03,0.2),hue:ra(200,350),twP:ra(0,Math.PI*2),twS:ra(0.3,2)}}
 
 export const preset:PresetModule={
@@ -17,7 +16,7 @@ export const preset:PresetModule={
     let stopped=false,raf:number
     const stars:PSStar[]=[],waves:PSWave[]=[]
     for(let i=0;i<STAR_COUNT;i++)stars.push(makeStar())
-    for(let i=0;i<WAVE_COUNT;i++)waves.push({angle:ra(0,Math.PI*2),life:1+i*0.15,maxRadius:ra(0.3,0.6),speed:ra(0.003,0.007),hue:ra(180,260)})
+    for(let i=0;i<WAVE_COUNT;i++)waves.push({angle:ra(0,Math.PI*2),life:1+i*0.15,maxRadius:ra(0.3,0.8),speed:ra(0.003,0.007),hue:ra(180,260)})
 
     const freq=new Uint8Array(analyser?.frequencyBinCount??128)
     let avgE=0,bass=0,mid=0,frame=0,pulseAngle=0,pulsePhase=0
@@ -51,11 +50,11 @@ export const preset:PresetModule={
       ctx.fillStyle=bg;ctx.fillRect(0,0,W,H)
 
       // 星云辉光
-      const ng=ctx.createRadialGradient(CX,CY,0,CX,CY,SS*0.4)
-      ng.addColorStop(0,`rgba(130,80,180,${0.02+avgE*0.03})`)
-      ng.addColorStop(0.5,`rgba(80,100,160,${0.01+avgE*0.02})`)
+      const ng=ctx.createRadialGradient(CX,CY,0,CX,CY,SS*0.5)
+      ng.addColorStop(0,`rgba(130,80,180,${0.04+avgE*0.04})`)
+      ng.addColorStop(0.5,`rgba(80,100,160,${0.02+avgE*0.03})`)
       ng.addColorStop(1,"rgba(0,0,0,0)")
-      ctx.fillStyle=ng;ctx.beginPath();ctx.arc(CX,CY,SS*0.4,0,Math.PI*2);ctx.fill()
+      ctx.fillStyle=ng;ctx.beginPath();ctx.arc(CX,CY,SS*0.5,0,Math.PI*2);ctx.fill()
 
       // 星场
       for(const s of stars){
@@ -67,54 +66,57 @@ export const preset:PresetModule={
         if(sz2>0.15){ctx.beginPath();ctx.arc(sx,sy,sz2*0.5,0,Math.PI*2);ctx.fillStyle=`hsla(${s.hue},40%,${45+db*25}%,${db*0.3*tw})`;ctx.fill()}
       }
 
-      // 脉冲光束
-      const beamBright=0.1+bass*0.4+avgE*0.1
-      const beamLength=SS*0.7
+      // 脉冲光束（更长更粗）
+      const beamBright=0.15+bass*0.5+avgE*0.15
+      const beamLength=SS*0.95
+      const beamWidthMul=2
       for(let bi=0;bi<2;bi++){
         const beamAngle=pulseAngle+bi*Math.PI
         const bx=CX+Math.cos(beamAngle)*beamLength
         const by=CY+Math.sin(beamAngle)*beamLength
         const bg2=ctx.createRadialGradient(CX,CY,0,CX,CY,beamLength)
-        bg2.addColorStop(0,`hsla(${260+bi*40},80%,80%,${beamBright*0.5})`)
-        bg2.addColorStop(0.1,`hsla(${250+bi*40},70%,70%,${beamBright*0.3})`)
-        bg2.addColorStop(0.3,`hsla(${240+bi*40},60%,60%,${beamBright*0.1})`)
+        bg2.addColorStop(0,`hsla(${260+bi*40},80%,80%,${beamBright*0.6})`)
+        bg2.addColorStop(0.15,`hsla(${250+bi*40},70%,70%,${beamBright*0.4})`)
+        bg2.addColorStop(0.4,`hsla(${240+bi*40},60%,60%,${beamBright*0.15})`)
         bg2.addColorStop(1,"hsla(0,0%,0%,0)")
         ctx.fillStyle=bg2;ctx.save();ctx.translate(CX,CY);ctx.rotate(beamAngle)
-        ctx.beginPath();ctx.rect(0,-beamLength*0.006,beamLength,beamLength*0.012)
+        ctx.beginPath();ctx.rect(0,-beamLength*0.012*beamWidthMul,beamLength,beamLength*0.024*beamWidthMul)
         ctx.fill();ctx.restore()
 
+        // 光束辉光
         for(let ei=0;ei<3;ei++){
-          const eOff=ei*SS*0.015
-          const eg=ctx.createRadialGradient(bx+eOff,by,0,bx+eOff,by,beamLength*0.04*(1-ei*0.2))
-          eg.addColorStop(0,`hsla(${270+bi*30},80%,80%,${beamBright*0.08*(1-ei*0.3)})`)
+          const eOff=ei*SS*0.025
+          const eSz=beamLength*0.06*(1-ei*0.2)*beamWidthMul
+          const eg=ctx.createRadialGradient(bx+eOff,by,0,bx+eOff,by,eSz)
+          eg.addColorStop(0,`hsla(${270+bi*30},80%,80%,${beamBright*0.12*(1-ei*0.3)})`)
           eg.addColorStop(1,"hsla(0,0%,0%,0)")
-          ctx.fillStyle=eg;ctx.beginPath();ctx.arc(bx+eOff,by,beamLength*0.04*(1-ei*0.2),0,Math.PI*2);ctx.fill()
+          ctx.fillStyle=eg;ctx.beginPath();ctx.arc(bx+eOff,by,eSz,0,Math.PI*2);ctx.fill()
         }
       }
 
-      // 辐射波纹
+      // 辐射波纹（更大）
       for(const w of waves){
         w.life+=w.speed*(1+bass)
-        if(w.life>1.5){w.life=0;w.angle=ra(0,Math.PI*2);w.maxRadius=ra(0.3,0.6);w.hue=ra(180,260)}
-        const wr=w.life*SS*0.3
-        const wAlpha=(1-w.life/1.5)*0.1*(1+avgE)
+        if(w.life>1.5){w.life=0;w.angle=ra(0,Math.PI*2);w.maxRadius=ra(0.4,0.8);w.hue=ra(180,260)}
+        const wr=w.life*SS*0.4
+        const wAlpha=(1-w.life/1.5)*0.15*(1+avgE)
         if(wAlpha<0.005)continue
         ctx.save();ctx.translate(CX,CY);ctx.rotate(w.angle)
         ctx.scale(1,0.5)
-        for(let ri2=0;ri2<2;ri2++){
-          const r=wr+ri2*8
-          const wa=wAlpha*(1-ri2*0.3)
+        for(let ri2=0;ri2<3;ri2++){
+          const r=wr+ri2*12
+          const wa=wAlpha*(1-ri2*0.25)
           ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2)
           ctx.strokeStyle=`hsla(${w.hue+ri2*10},70%,70%,${wa})`
-          ctx.lineWidth=1.5-ri2*0.5;ctx.stroke()
+          ctx.lineWidth=2-ri2*0.5;ctx.stroke()
         }
         ctx.restore()
       }
 
-      // 核心中子星
+      // 核心中子星（更大）
       const corePulse=0.5+Math.sin(pulsePhase*3)*0.5
-      const coreA=0.3+corePulse*0.4+bass*0.2
-      const coreR=SS*0.02*(1+corePulse*0.3+bass*0.2)
+      const coreA=0.4+corePulse*0.5+bass*0.25
+      const coreR=SS*0.04*(1+corePulse*0.3+bass*0.2)
       const cg=ctx.createRadialGradient(CX,CY,0,CX,CY,coreR*3)
       cg.addColorStop(0,`rgba(255,255,255,${coreA})`)
       cg.addColorStop(0.15,`hsla(240,70%,80%,${coreA*0.8})`)

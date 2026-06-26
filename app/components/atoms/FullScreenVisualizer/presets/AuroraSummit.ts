@@ -1,28 +1,37 @@
-// 🌌 AURORA SUMMIT — 极光之巅
+// 🌌 AURORA SUMMIT — 极光之巅 (v2)
+// 全屏极光幕帘 + 垂直光柱 + 星空
 import type { PresetModule } from "./types";
 
-interface ASStar{x:number;y:number;z:number;size:number;hue:number;twinkle:number}
 interface AuroraCurtain{
-  x:number;width:number;height:number;hue:number;hueWidth:number;
-  sat:number;light:number;alpha:number;waveFreq:number;waveAmp:number;waveSpeed:number;bands:number;offset:number;
+  x:number;width:number;hue:number;hueWidth:number;alpha:number;
+  waveFreq:number;waveAmp:number;waveSpeed:number;offset:number;
 }
+interface AuroraPillar{
+  x:number;height:number;width:number;hue:number;alpha:number;phase:number;
+}
+interface Star{px:number;py:number;size:number;bright:number;twinklePhase:number}
 
-const STAR_COUNT=300,CURTAIN_COUNT=8
+const CURTAINS=10,PILLARS=20,STARS=200
 const ra=(a:number,b:number)=>a+Math.random()*(b-a)
 const ri=(a:number,b:number)=>Math.floor(ra(a,b+1))
-const sst=(e0:number,e1:number,x:number)=>{const t=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return t*t*(3-2*t)}
-
-function makeStar():ASStar{return{x:ra(-1.5,1.5),y:ra(-1.5,1.5),z:ra(1,8),size:ra(0.05,0.3),hue:ra(200,350),twinkle:ra(0.3,1)}}
 
 function makeCurtain(i:number):AuroraCurtain{
-  const hues=[90,120,150,180,210,260,280,300]
-  const hue=hues[i%hues.length]
+  const hues=[100,140,180,220,260,280,120,160,200,240]
   return{
-    x:ra(-0.1,1.1),width:ra(0.2,0.5),height:ra(0.2,0.7),
-    hue,hueWidth:ra(10,40),sat:ri(60,90),light:ri(50,75),
-    alpha:ra(0.08,0.25),waveFreq:ra(1.5,4),waveAmp:ra(0.02,0.08),
-    waveSpeed:ra(0.005,0.02),bands:ri(15,35),offset:ra(0,Math.PI*2)
+    x:ra(-0.1,1.1),width:ra(0.25,0.6),
+    hue:hues[i%hues.length],hueWidth:ra(20,50),
+    alpha:ra(0.15,0.4),waveFreq:ra(1.5,4.5),waveAmp:ra(0.03,0.1),
+    waveSpeed:ra(0.004,0.018),offset:ra(0,Math.PI*2),
   }
+}
+function makePillar():AuroraPillar{
+  return{
+    x:ra(0.05,0.95),height:ra(0.3,0.85),width:ra(0.02,0.06),
+    hue:ri(100,280),alpha:ra(0.04,0.15),phase:ra(0,Math.PI*2),
+  }
+}
+function makeStar():Star{
+  return{px:ra(0,1),py:ra(0,0.4),size:ra(0.3,1.5),bright:ra(0.3,1),twinklePhase:ra(0,Math.PI*2)}
 }
 
 export const preset:PresetModule={
@@ -31,9 +40,9 @@ export const preset:PresetModule={
   createRenderer(canvas,analyser,playing){
     const ctx=canvas.getContext("2d")!
     let stopped=false,raf:number
-    const stars:ASStar[]=[],curtains:AuroraCurtain[]=[]
-    for(let i=0;i<STAR_COUNT;i++)stars.push(makeStar())
-    for(let i=0;i<CURTAIN_COUNT;i++)curtains.push(makeCurtain(i))
+    const curtains=Array.from({length:CURTAINS},(_,i)=>makeCurtain(i))
+    const pillars=Array.from({length:PILLARS},()=>makePillar())
+    const stars=Array.from({length:STARS},()=>makeStar())
 
     const freq=new Uint8Array(analyser?.frequencyBinCount??128)
     let avgE=0,bass=0,mid=0,frame=0
@@ -48,7 +57,7 @@ export const preset:PresetModule={
 
     function draw(){
       if(stopped)return;raf=requestAnimationFrame(draw);frame++
-      const W=window.innerWidth,H=window.innerHeight,CX=W/2,CY=H/2,SS=Math.min(W,H)
+      const W=window.innerWidth,H=window.innerHeight,SS=Math.min(W,H)
 
       if(analyser&&playing){
         analyser.getByteFrequencyData(freq);const L=freq.length;let sum=0;for(let i=0;i<L;i++)sum+=freq[i]
@@ -57,71 +66,97 @@ export const preset:PresetModule={
         mid=mid*0.7+(ms/mc/255)*0.3
       }else{avgE*=0.97;bass*=0.95;mid*=0.95}
 
-      const waveAmpMul=1+bass*2
+      const intensityMul=1+bass*2.5+avgE
 
-      // 天空背景
+      // ─── 天空 ───
       ctx.clearRect(0,0,W,H)
       const sky=ctx.createLinearGradient(0,0,0,H)
-      sky.addColorStop(0,"rgba(5,3,15,1)");sky.addColorStop(0.3,"rgba(10,5,20,1)")
-      sky.addColorStop(0.6,`rgba(15,10,25,${1+avgE*0.2})`);sky.addColorStop(1,"rgba(5,8,15,1)")
+      sky.addColorStop(0,"rgba(4,2,12,1)");sky.addColorStop(0.4,"rgba(10,5,22,1)")
+      sky.addColorStop(0.7,"rgba(20,12,30,1)");sky.addColorStop(1,"rgba(8,12,16,1)")
       ctx.fillStyle=sky;ctx.fillRect(0,0,W,H)
 
-      // 地平线辉光
-      const hg=ctx.createRadialGradient(CX,H,0,CX,H,SS*0.5)
-      hg.addColorStop(0,`hsla(120,40%,20%,${0.04+avgE*0.04})`)
-      hg.addColorStop(0.4,`hsla(150,30%,15%,${0.03+avgE*0.03})`)
-      hg.addColorStop(1,"hsla(0,0%,0%,0)")
-      ctx.fillStyle=hg;ctx.fillRect(0,0,W,H)
-
-      // 星场
+      // ─── 星空 ───
       for(const s of stars){
-        s.z-=0.003*(1+mid*0.5)
-        if(s.z<=0.5){Object.assign(s,makeStar());continue}
-        const sx=CX+(s.x/s.z)*W*0.5,sy=CY+(s.y/s.z)*H*0.4
-        if(sx<-30||sx>W+30||sy<-30||sy>H+30){Object.assign(s,makeStar());continue}
-        const sz2=Math.min(2.5,s.size*(1/Math.max(0.2,s.z))*0.004*SS),db=Math.min(1,(6-s.z)/6*2),twinkle=0.5+Math.sin(frame*0.03+s.twinkle*10)*0.5
-        if(sz2>0.15){ctx.beginPath();ctx.arc(sx,sy,sz2*0.6,0,Math.PI*2);ctx.fillStyle=`hsla(${s.hue},40%,${50+db*30}%,${db*0.4*twinkle})`;ctx.fill()}
+        s.twinklePhase+=0.03*(1+mid*0.3)
+        const blink=0.5+0.5*Math.sin(s.twinklePhase)
+        ctx.beginPath()
+        ctx.arc(s.px*W,s.py*H,s.size*(0.3+blink*0.7),0,Math.PI*2)
+        ctx.fillStyle=`hsla(0,0%,${60+30*s.bright}%,${s.bright*0.6*blink*(0.3+avgE*0.3)})`
+        ctx.fill()
       }
 
-      // 极光幕帘
+      // ─── 极光幕帘（半透明叠加，彩色） ───
       for(const c of curtains){
-        const cA=c.alpha*(0.5+avgE)
-        if(cA<0.003)continue
-        for(let bi=0;bi<c.bands;bi++){
-          const bt=bi/c.bands
-          const bx=(c.x+bt*c.width)*W
-          const bandWave=Math.sin(bt*c.waveFreq*Math.PI*2+frame*c.waveSpeed+c.offset)*c.waveAmp*waveAmpMul
-          const bandWave2=Math.sin(bt*c.waveFreq*0.5*Math.PI*2+frame*c.waveSpeed*0.7+c.offset*1.3)*c.waveAmp*0.5*waveAmpMul
-          const topY=H*(1-c.height+bandWave+bandWave2)
-          const botY=H*0.95
+        const cA=c.alpha*(0.3+0.7*avgE)*(0.6+0.4*Math.sin(frame*0.003+c.offset))
+        if(cA<0.005)continue
+        const segs=Math.floor(W*0.04)
+        for(let si=0;si<segs;si++){
+          const st=si/segs
+          const x=c.x*W+st*c.width*W
+          // 波动曲线
+          const wave1=Math.sin(st*c.waveFreq*Math.PI*2+frame*c.waveSpeed+c.offset)
+          const wave2=Math.sin(st*c.waveFreq*0.5*Math.PI*2+frame*c.waveSpeed*0.7+c.offset*1.3)
+          const topY=H*(0.05+0.1*avgE)+(wave1*c.waveAmp+wave2*c.waveAmp*0.5)*H*intensityMul
+          const botY=H*(0.85+0.08*avgE)+wave1*H*0.02*intensityMul
           if(topY<0||topY>botY)continue
-          const intensity=1-Math.abs(bt-0.5)*1.5
+          const intensity=1-Math.abs(st-0.5)*1.2
           if(intensity<=0)continue
-          const bandAlpha=cA*intensity*(0.5+Math.sin(frame*0.01+bi)*0.2)
+          const bandA=cA*intensity*(0.5+0.5*Math.sin(frame*0.015+si*0.3+c.offset))
+          const hue=c.hue+st*c.hueWidth*Math.sin(frame*0.004+c.offset)*0.4
+          // 垂直渐变：上淡下亮再渐消
+          const gh=botY-topY
           const grad=ctx.createLinearGradient(0,topY,0,botY)
-          const hue=c.hue+bt*c.hueWidth*Math.sin(frame*0.005+c.offset)*0.3
-          grad.addColorStop(0,`hsla(${hue},${c.sat}%,${c.light+20}%,0)`)
-          grad.addColorStop(0.2,`hsla(${hue},${c.sat}%,${c.light+15}%,${bandAlpha*0.7})`)
-          grad.addColorStop(0.5,`hsla(${hue},${c.sat+5}%,${c.light+20}%,${bandAlpha})`)
-          grad.addColorStop(0.8,`hsla(${hue+10},${c.sat-5}%,${c.light+5}%,${bandAlpha*0.6})`)
-          grad.addColorStop(1,`hsla(${hue+20},${c.sat*0.5}%,${c.light-10}%,0)`)
-          ctx.fillStyle=grad;ctx.fillRect(bx-1,topY,(c.width/c.bands)*W+2,botY-topY)
+          grad.addColorStop(0,`hsla(${hue},80%,60%,0)`)
+          grad.addColorStop(0.1,`hsla(${hue},85%,65%,${bandA*0.4})`)
+          grad.addColorStop(0.35,`hsla(${hue+5},90%,70%,${bandA})`)
+          grad.addColorStop(0.65,`hsla(${hue+15},85%,65%,${bandA*0.8})`)
+          grad.addColorStop(0.85,`hsla(${hue+20},70%,55%,${bandA*0.3})`)
+          grad.addColorStop(1,`hsla(${hue+30},50%,40%,0)`)
+          ctx.fillStyle=grad
+          ctx.fillRect(x-(c.width*W)/(segs*1.2),topY,(c.width*W)/(segs*0.9)+1,gh)
         }
       }
 
-      // 底部地形剪影
+      // ─── 垂直光柱 ───
+      for(const p of pillars){
+        const pulse=0.3+0.7*Math.sin(frame*0.02+p.phase+mid*4)
+        const pA=p.alpha*(0.2+0.8*avgE+0.5*bass)*pulse
+        if(pA<0.003)continue
+        const px=p.x*W,pw=p.width*W*(0.5+avgE*0.5)
+        const ph=p.height*H
+        const pTop=H*(0.08+0.05*avgE)
+        const pg=ctx.createLinearGradient(0,H,0,H-ph)
+        pg.addColorStop(0,`hsla(${p.hue},90%,70%,0)`)
+        pg.addColorStop(0.2,`hsla(${p.hue},95%,75%,${pA*0.5})`)
+        pg.addColorStop(0.5,`hsla(${p.hue+10},100%,80%,${pA})`)
+        pg.addColorStop(0.7,`hsla(${p.hue+20},90%,70%,${pA*0.6})`)
+        pg.addColorStop(1,`hsla(${p.hue+30},70%,55%,0)`)
+        ctx.fillStyle=pg
+        ctx.fillRect(px-pw/2,H-ph,pw,ph-pTop)
+      }
+
+      // ─── 底部地形 ───
       ctx.beginPath();ctx.moveTo(0,H)
-      for(let x=0;x<=W;x+=4){
-        const yy=H-10-Math.sin(x*0.003)*8-Math.sin(x*0.008)*5-Math.sin(x*0.015)*3-bass*4
-        ctx.lineTo(x,yy)
+      for(let xx=0;xx<=W;xx+=3){
+        const yy=H-12-Math.sin(xx*0.002)*10-Math.sin(xx*0.006)*6-Math.sin(xx*0.012)*3-bass*3
+        ctx.lineTo(xx,yy)
       }
       ctx.lineTo(W,H);ctx.closePath()
-      ctx.fillStyle="rgba(3,4,8,0.6)";ctx.fill()
+      ctx.fillStyle="rgba(3,5,10,0.7)";ctx.fill()
 
       // 地面辉光
-      const gnd=ctx.createLinearGradient(0,H-30,0,H)
-      gnd.addColorStop(0,`hsla(120,30%,10%,${0.04+avgE*0.04})`);gnd.addColorStop(1,"hsla(120,30%,5%,0)")
-      ctx.fillStyle=gnd;ctx.fillRect(0,H-30,W,30)
+      const gnd=ctx.createLinearGradient(0,H*0.97,0,H)
+      gnd.addColorStop(0,"rgba(50,80,40,0)")
+      gnd.addColorStop(0.5,`rgba(60,100,50,${0.02+avgE*0.03})`)
+      gnd.addColorStop(1,`rgba(80,120,60,${0.01+avgE*0.02})`)
+      ctx.fillStyle=gnd;ctx.fillRect(0,H*0.97,W,H*0.03)
+
+      // 地平线极光辉光
+      const hg=ctx.createRadialGradient(W/2,H,0,W/2,H,SS*0.4)
+      hg.addColorStop(0,`hsla(140,60%,30%,${0.07+avgE*0.08+bass*0.06})`)
+      hg.addColorStop(0.5,`hsla(180,50%,25%,${0.04+avgE*0.05})`)
+      hg.addColorStop(1,"hsla(0,0%,0%,0)")
+      ctx.fillStyle=hg;ctx.fillRect(0,0,W,H)
 
       // --- 能量柱 ---
       if(analyser&&playing&&freq.length>0){
