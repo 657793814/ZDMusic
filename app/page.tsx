@@ -1,6 +1,6 @@
 "use client";
 
-import { AmbientBackground, DanmakuOverlay, FullScreenVisualizer, Logo, ModeSwitch } from "@/app/components/atoms";
+import { AmbientBackground, DanmakuOverlay, FullScreenVisualizer, Logo, ModeSwitch, LyricsDisplay } from "@/app/components/atoms";
 import {
   AgentChat,
   ClockPanel,
@@ -11,26 +11,44 @@ import {
 import { usePlayer } from "@/app/context/PlayerContext";
 import { useI18n } from "@/app/lib/i18n";
 import { useEffect } from "react";
+import { useLyrics } from "@/app/hooks/useLyrics";
 
 export default function Home() {
-  const { analyser, state, vizReady, flipped, toggleFlip } = usePlayer();
+  const { analyser, state, vizReady, flipped, toggleFlip, lyricsOpen, toggleLyrics, seek } = usePlayer();
+  const lyricsData = useLyrics(state.current);
   const { lang, cycleLang } = useI18n();
 
-  // ESC 退出全屏模式
+  // ESC 退出全屏/歌词模式
   useEffect(() => {
-    if (!flipped) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        toggleFlip();
+        if (flipped) toggleFlip();
+        if (lyricsOpen) toggleLyrics();
       }
     };
+    if (!flipped && !lyricsOpen) return;
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [flipped, toggleFlip]);
+  }, [flipped, lyricsOpen, toggleFlip, toggleLyrics]);
 
   return (
     <>
+      {/* 歌词模式 */}
+      {lyricsOpen && (
+        <LyricsDisplay
+          syncedLyrics={lyricsData.synced}
+          loading={lyricsData.loading}
+          currentTime={state.progress}
+          duration={state.duration}
+          playing={state.playing}
+          onSeek={seek}
+          onExit={toggleLyrics}
+          title={state.current?.title}
+          artist={state.current?.author}
+        />
+      )}
+
       {/* 全屏沉浸模式 */}
       {flipped && (
         <FullScreenVisualizer

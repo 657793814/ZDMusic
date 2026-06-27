@@ -33,6 +33,8 @@ type PlayerCtx = {
   analyser: AnalyserNode | null;
   ensureVisualizer: () => void;
   vizReady: boolean;
+  lyricsOpen: boolean;
+  toggleLyrics: () => void;
 };
 
 const PlayerContext = createContext<PlayerCtx | null>(null);
@@ -59,7 +61,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const hasScannedRef = useRef(false);
 
   const [flipped, setFlipped] = useState(false);
-  const toggleFlip = useCallback(() => setFlipped((v) => !v), []);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
+
+  const toggleFlip = useCallback(() => {
+    setFlipped((v) => !v);
+    setLyricsOpen(false);
+  }, []);
+
+  const toggleLyrics = useCallback(() => {
+    setLyricsOpen((v) => !v);
+    setFlipped(false);
+  }, []);
 
   const {
     audioRef,
@@ -349,6 +361,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setPlayMode,
       flipped,
       toggleFlip,
+      lyricsOpen,
+      toggleLyrics,
       analyser,
       ensureVisualizer: ensureConnected,
       vizReady,

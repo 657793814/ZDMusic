@@ -75,14 +75,8 @@ export function FullScreenVisualizer({ analyser, playing, onExit }: Props) {
     };
   }, [currentId, analyser, playing]);
 
-  // 键盘 ESC
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onExit();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onExit]);
+  // ESC 退出由 page.tsx 统一处理
+  // Keyboard ESC is managed by page.tsx to avoid double-toggle conflicts
 
   return (
     <div

@@ -3,6 +3,7 @@ export { Badge } from "./Badge";
 export { DanmakuOverlay } from "./DanmakuOverlay";
 export { DanmakuToggle } from "./DanmakuToggle";
 export { FullScreenVisualizer } from "./FullScreenVisualizer";
+export { LyricsDisplay } from "./LyricsDisplay";
 export { GlowDot } from "./GlowDot";
 export { Logo } from "./Logo";
 export { ModeSwitch } from "./ModeSwitch";

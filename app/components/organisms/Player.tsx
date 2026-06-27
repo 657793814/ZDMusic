@@ -9,7 +9,7 @@ import { SpectrumBars } from "@/app/components/atoms/SpectrumBars";
 import { usePlayer } from "@/app/context/PlayerContext";
 
 export function Player() {
-  const { state, next, prev, togglePlay, stop, seek, setVolume, playMode, setPlayMode, analyser, vizReady, flipped, toggleFlip } = usePlayer();
+  const { state, next, prev, togglePlay, stop, seek, setVolume, playMode, setPlayMode, analyser, vizReady, flipped, toggleFlip, lyricsOpen, toggleLyrics } = usePlayer();
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -52,6 +52,35 @@ export function Player() {
           setPlayMode={setPlayMode}
         />
         <div className="flex items-center gap-2">
+          {/* 歌词按钮 */}
+          <button
+            type="button"
+            onClick={toggleLyrics}
+            className="flex h-7 w-7 items-center justify-center rounded-full border transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]"
+            style={{
+              borderColor: "var(--color-outline-dim)",
+              color: lyricsOpen ? "var(--color-primary)" : "var(--color-outline)",
+              fontFamily: "var(--font-body)",
+            }}
+            aria-label={lyricsOpen ? "关闭歌词" : "歌词"}
+            title={lyricsOpen ? "关闭歌词" : "歌词"}
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+          </button>
+
           {/* 页面翻转按钮 */}
           <button
             type="button"

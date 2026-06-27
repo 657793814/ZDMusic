@@ -282,7 +282,7 @@ async function convertBilibiliVideos(baseUrl: string, bvids: string[], titles?: 
   const scanTracks: any[] = scanData.tracks || [];
   console.log(`[convertBilibiliVideos] Scan returned ${scanTracks.length} tracks`);
 
-  // 6. 匹配下载的文件，关联 bvid 并返回
+  // 7. 匹配下载的文件，关联 bvid 并返回
   // 优先找本次新增的文件；若无新增，则匹配目录中已有的文件（重试场景）
   const finalNewFiles = readdirSync(biliDir).filter((f) => !beforeFiles.has(f));
   const hasNewFiles = finalNewFiles.length > 0;
@@ -321,6 +321,59 @@ async function convertBilibiliVideos(baseUrl: string, bvids: string[], titles?: 
       });
     }
   }
+
+  // 8. 为下载的文件获取歌词并保存 .lrc
+  const lrcPromises = added.map(async (track: any) => {
+    try {
+      const keywords = (track.title || track.filename || "")
+        .replace(/\.mp3$/i, "")
+        .replace(/【[^】]*】/g, "")
+        .replace(/^\s*[-—|]+\s*/g, "")
+        .trim();
+
+      let songTitle = keywords;
+      let songArtist = "";
+      const bracketMatch = keywords.match(/《([^》]+)》/);
+      if (bracketMatch) {
+        const content = bracketMatch[1]!;
+        const dashIdx = content.search(/[-—–]/);
+        songTitle = dashIdx > 1 ? content.slice(0, dashIdx).trim() : content;
+        const beforeBracket = keywords.split(/《/)[0]?.trim() || "";
+        songArtist = beforeBracket.replace(/^【[^】]*】/g, "").replace(/[-—|\s]+$/, "").trim();
+      }
+
+      if (!songTitle) return;
+
+      const params = new URLSearchParams({ track_name: songTitle });
+      if (songArtist) params.set("artist_name", songArtist);
+
+      const searchRes = await fetch(`https://lrclib.net/api/search?${params}`, {
+        headers: { "User-Agent": "ZDMusic/1.0" },
+      });
+      if (!searchRes.ok) return;
+
+      const results: any[] = await searchRes.json();
+      if (!results.length) return;
+
+      const best = songArtist
+        ? results.find(
+            (r) =>
+              r.artistName.toLowerCase() === songArtist.toLowerCase() &&
+              r.trackName.toLowerCase() === songTitle.toLowerCase()
+          ) ?? results[0]
+        : results[0];
+
+      if (best?.syncedLyrics) {
+        const mp3Path = join(biliDir, track.filename);
+        const lrcPath = mp3Path.replace(/\.mp3$/i, ".lrc");
+        writeFileSync(lrcPath, best.syncedLyrics, "utf-8");
+        console.log(`[lyrics] Saved: ${lrcPath}`);
+      }
+    } catch {
+      // 不阻塞
+    }
+  });
+  await Promise.allSettled(lrcPromises);
 
   return JSON.stringify({ status: "completed", tracks: added }, null, 2);
 }

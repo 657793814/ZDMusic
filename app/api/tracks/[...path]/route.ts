@@ -95,6 +95,14 @@ export async function DELETE(
   try {
     await unlink(fullPath);
 
+    // 同时删除对应的 .lrc 歌词文件
+    const lrcPath = fullPath.replace(/\.mp3$/i, ".lrc");
+    try {
+      await unlink(lrcPath);
+    } catch {
+      // .lrc 文件不存在则忽略
+    }
+
     // 如果父目录为空，也清理掉
     const parent = path.dirname(fullPath);
     try {
