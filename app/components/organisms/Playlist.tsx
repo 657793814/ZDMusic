@@ -12,12 +12,14 @@ export function Playlist() {
   const [filter, setFilter] = useState("");
   const [localTracks, setLocalTracks] = useState<Track[] | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const fetching = useRef(false);
 
   const load = useCallback(() => {
     if (fetching.current) return;
     fetching.current = true;
-    fetch("/api/tracks/scan", { cache: "no-store" })
+    setRefreshing(true);
+    fetch("/api/tracks/scan?t=" + Date.now(), { cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<{ tracks?: Track[] }>;
@@ -34,6 +36,7 @@ export function Playlist() {
       })
       .finally(() => {
         fetching.current = false;
+        setRefreshing(false);
       });
   }, []);
 
@@ -99,10 +102,11 @@ export function Playlist() {
         <button
           type="button"
           onClick={load}
-          className="flex h-6 w-6 items-center justify-center rounded-full border transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]"
+          disabled={refreshing}
+          className="flex h-6 w-6 items-center justify-center rounded-full border transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)] disabled:opacity-40"
           style={{
             borderColor: "var(--color-outline-dim)",
-            color: "var(--color-outline)",
+            color: refreshing ? "var(--color-primary)" : "var(--color-outline)",
           }}
           aria-label={t("refresh")}
           title={t("refreshTitle")}
@@ -115,6 +119,7 @@ export function Playlist() {
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
+            className={refreshing ? "animate-spin" : ""}
           >
             <path d="M23 4v6h-6" />
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />

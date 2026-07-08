@@ -8,12 +8,14 @@ import {
   Playlist,
   StatusBar,
 } from "@/app/components/organisms";
+import { SettingsDialog } from "@/app/components/molecules/SettingsDialog";
 import { usePlayer } from "@/app/context/PlayerContext";
 import { useI18n } from "@/app/lib/i18n";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLyrics } from "@/app/hooks/useLyrics";
 
 export default function Home() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { analyser, state, vizReady, flipped, toggleFlip, lyricsOpen, toggleLyrics, seek } = usePlayer();
   const lyricsData = useLyrics(state.current);
   const { lang, cycleLang } = useI18n();
@@ -63,7 +65,9 @@ export default function Home() {
 
       <DanmakuOverlay />
 
-      <div className="flex min-h-[100dvh] items-center justify-center p-3 text-[color:var(--color-on-surface)] md:p-6 lg:p-8">
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      <div className="flex h-dvh items-center justify-center overflow-hidden p-3 text-[color:var(--color-on-surface)] md:p-6 lg:p-8">
         <div
           className="flex h-[min(98dvh,75rem)] w-full max-w-7xl flex-col overflow-hidden rounded-2xl"
           style={{
@@ -81,6 +85,15 @@ export default function Home() {
             <Logo />
             <nav aria-label="Main" className="flex flex-wrap items-center gap-3 md:gap-4">
               <ModeSwitch />
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                aria-label="设置"
+                title="设置"
+              >
+                <span className="material-symbols-outlined text-[20px]">settings</span>
+              </button>
               <button
                 type="button"
                 onClick={cycleLang}

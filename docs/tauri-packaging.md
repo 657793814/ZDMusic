@@ -1,4 +1,6 @@
-# AuraPlayer Tauri v2 桌面打包方案
+# Aura Player Tauri v2 桌面打包方案
+
+> **Phase 1-4 全部完成 ✅** 实施记录见 `docs/tauri-implementation.md`
 
 ## 背景
 
@@ -9,29 +11,26 @@
 - Next.js 服务器作为子进程运行，继续提供所有 API Route
 - 前端用相对路径 `/api/...` 调用后端，无需改动
 
-## Phase 1: 初始化 Tauri 脚手架
+## Phase 1: 初始化 Tauri 脚手架 ✅
 
-### 1.1 安装 Tauri CLI
+### 1.1 安装依赖
 
 ```bash
-npm install -D @tauri-apps/cli
+npm install -D @tauri-apps/cli        # Tauri CLI
 ```
 
 ### 1.2 修改 `next.config.ts`
 
-添加 `output: "standalone"`：
-
 ```typescript
 const nextConfig: NextConfig = {
   turbopack: { root: path.resolve(".") },
-  output: "standalone",
+  output: "standalone",                // ← 新增：standalone 输出
 };
 ```
 
 ### 1.3 创建健康检查端点
 
-新建 `app/api/health/route.ts`：
-
+`app/api/health/route.ts`:
 ```typescript
 export const dynamic = "force-dynamic";
 export async function GET() {
@@ -39,59 +38,85 @@ export async function GET() {
 }
 ```
 
-### 1.4 Tauri 配置 (`tauri/tauri.conf.json`)
+### 1.4 创建加载页
 
-- `devUrl`: `http://localhost:3000`
-- `beforeBuildCommand`: `next build`
-- 窗口: 1400x900, 可调整, Overlay titleBar
-- CSP: 允许 Google Fonts + inline styles
+`dist/index.html` — 开发模式 WebView 启动时的过渡页，自动跳转到 `http://localhost:3000`
 
-### 1.5 验证
+### 1.5 CSP 策略
+
+`tauri.conf.json` 中配置 CSP，允许 B站 API, LRCLIB, localhost, Google Fonts。
+
+### 1.6 验证
 
 ```bash
-npm run dev          # 终端1
-npm run tauri:dev    # 终端2: 自动打开 WebView
+npm run tauri:dev    # 启动 WebView + Next.js dev server
 ```
 
-前端零改动 — 所有 API 调用都是相对路径。
+## Phase 2: 服务器生命周期管理 ✅
 
-## Phase 2: 服务器生命周期管理
+### 2.1 Rust 子进程管理
 
-### `tauri/src/commands/server.rs` — 三个 Tauri 命令
+`src-tauri/src/commands/server.rs`:
 
-| 命令 | 功能 |
-|------|------|
-| `start_server` | 启动 Next.js 子进程（dev: `npx next dev`，prod: `node server.js`），传入 `MUSIC_DIR` 等环境变量 |
-| `stop_server` | 应用退出时终止子进程 |
-| `is_server_alive` | 轮询 `localhost:3000/api/health` |
+| Tauri 命令 | 功能 |
+|-----------|------|
+| `start_server` | 从 bundle 资源启动 `node server.js` |
+| `stop_server` | 终止子进程 |
+| `is_server_alive` | TCP 健康检查 |
 
-改造 `tauri dev`：不再需要手动开两个终端，Tauri 自动启动 Next.js 子进程并轮询健康检查。
+### 2.2 自动启动流程（生产模式）
 
-生产模式：`tauri build` 将 `.next/standalone/` 打包进 `.app`，启动时从 bundled 目录运行。
+Rust `setup` 闭包中：
+1. 等待 1s 窗口初始化
+2. `start_server_sync` 从资源目录启动 `standalone/server.js`
+3. 每 500ms 轮询 TCP 3000（最多 30s）
+4. WebView 导航到 `http://localhost:3000`
 
-## Phase 3: 音乐目录配置
+退出时 `on_window_event(Destroyed)` + `RunEvent::Exit` 双重清理子进程。
 
-- `set_music_dir` Tauri 命令，持久化到 `~/Library/Application Support/com.auramusic.app/config.json`
+### 2.3 资源打包
+
+`scripts/prepare-standalone.mjs` — `tauri build` 前执行：
+1. 复制 `.next/static/` → `standalone/.next/static/`
+2. 复制 `public/` → `standalone/public/`
+3. 清理 source 文件（AGENTS.md, src-tauri/, docs/, 等）
+
+**重要：** standalone 因 API 路由的文件系统操作会追踪整个项目目录，
+不清理则 `.app` 体积达 6.3GB，清理后仅 51MB。
+
+## Phase 3: 音乐目录配置 ✅
+
+- `set_music_dir` / `get_music_dir` Tauri 命令
+- 持久化到 `~/Library/Application Support/com.zdmusic/config.json`
 - 启动 Next.js 子进程时作为 `MUSIC_DIR` 环境变量传入
-- 路径变更时重启子进程
+- 路径变更时自动重启子进程
+- 前端设置对话框 + 原生文件夹选择器
 
-## Phase 4: 包装与发布
+## Phase 4: 包装与发布 ✅
 
-- 各尺寸图标
-- 系统托盘（Play/Pause、Show/Quit）
-- macOS 自动启动（LaunchAgent）
-- `.dmg` 安装包
+- 自定义 Aurora 主题图标（SVG 源 → Sharp 渲染 → 各尺寸 PNG + .icns）
+- 系统托盘（显示窗口/播放暂停/退出 + 左键点击恢复）
+- macOS 自动启动（tauri-plugin-autostart, LaunchAgent）
+- 窗口关闭时隐藏到托盘（`CloseRequested` 拦截）
 
-## 关键风险
+## 最终产物
 
-1. `npx bv2mp3` 需要 `npx` 可用，打包后 PATH 可能受限，需用绝对路径
-2. 端口 3000 冲突 — Rust 侧检测并尝试其他端口
-3. Standalone 模式需确保 `node_modules` 随 bundle 包含
+| 产物 | 大小 |
+|------|------|
+| `卓动悦听.app` | **52 MB** |
+| `卓动悦听_0.1.0_aarch64.dmg` | **15 MB** |
 
-## 验证步骤
+独立运行，含 Next.js 服务器 + 系统托盘 + 自动启动 + 自定义图标。
 
-1. `npm run tauri:dev` — UI 完整渲染
-2. 刷新加载本地歌单（`/api/tracks/scan`）
-3. 点击歌曲播放（`/api/tracks/[...path]` 音频流）
-4. 与智能体对话搜索（`/api/chat` SSE 流）
-5. `npm run tauri:build` — 构建 DMG，安装后验证
+## 开发命令
+
+```bash
+# 开发模式（WebView + hot reload）
+npm run tauri:dev
+
+# 构建发布包 (.app + .dmg)
+npm run tauri:build
+
+# 重新生成图标（修改 source.svg 后）
+node scripts/generate-icons.mjs
+```

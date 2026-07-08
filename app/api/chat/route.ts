@@ -1,22 +1,34 @@
 import OpenAI from "openai";
 import { NextRequest } from "next/server";
 import { execSync } from "child_process";
-import { mkdirSync, readdirSync, renameSync, existsSync, writeFileSync } from "fs";
-import { join } from "path";
+import { existsSync, mkdirSync, readdirSync, renameSync, writeFileSync } from "fs";
+import { join, resolve } from "path";
 import { MUSIC_DIR } from "@/app/lib/tracks";
+import { getConfigVar } from "@/app/lib/config";
+import { getConfigVersion } from "@/app/api/config/reload/route";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 // ============================================================
 // OpenAI Client — 对接 Agnes/DeepSeek 等 OpenAI 风格服务商
+// 懒加载: 避免 module 加载时因无 API Key 抛出异常导致整个路由 500
 // ============================================================
-const client = new OpenAI({
-  baseURL: process.env.ANTHROPIC_BASE_URL || "https://apihub.agnes-ai.com/v1",
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-});
+const MODEL = "agnes-2.0-flash";
 
-const MODEL = process.env.ANTHROPIC_MODEL || "agnes-2.0-flash";
+let _client: OpenAI | null = null;
+let _clientVersion = 0;
+function getClient(): OpenAI {
+  const version = getConfigVersion();
+  if (!_client || version !== _clientVersion) {
+    _client = new OpenAI({
+      baseURL: getConfigVar("ANTHROPIC_BASE_URL", "https://apihub.agnes-ai.com/v1"),
+      apiKey: getConfigVar("ANTHROPIC_API_KEY", ""),
+    });
+    _clientVersion = version;
+  }
+  return _client;
+}
 
 // ============================================================
 // System Prompts
@@ -241,10 +253,16 @@ async function convertBilibiliVideos(baseUrl: string, bvids: string[], titles?: 
   const urlArgs = bvids.map((bv) => `--url="https://www.bilibili.com/video/${bv}"`).join(" ");
   console.log(`[convertBilibiliVideos] Downloading to ${biliDir}: ${urlArgs}`);
   try {
-    execSync(`cd ${biliDir} && npx bv2mp3 ${urlArgs}`, {
+    const nodeBin = process.execPath; // use same Node.js as the server itself
+    const bv2mp3Path = resolve(process.cwd(), "node_modules/bv2mp3/src/index.js");
+    execSync(`cd ${biliDir} && ${nodeBin} ${bv2mp3Path} ${urlArgs}`, {
       stdio: "pipe",
       timeout: 300_000,
       maxBuffer: 10 * 1024 * 1024,
+      env: {
+        ...process.env,
+        CLACK_HIDE: "1",
+      },
     });
   } catch (e: any) {
     console.error(`[convertBilibiliVideos] bv2mp3 failed:`, e.stderr?.toString() || e.message);
@@ -404,6 +422,34 @@ function sseEvent(sessionId: string, data: Record<string, unknown>) {
 export async function POST(req: NextRequest) {
   const { message, mode, history } = await req.json();
 
+  // 检查 API Key 是否已配置
+  const apiKey = getConfigVar("ANTHROPIC_API_KEY", "");
+  if (!apiKey) {
+    const stream = new ReadableStream({
+      start(controller) {
+        const encoder = new TextEncoder();
+        controller.enqueue(
+          encoder.encode(
+            `event: error\ndata: ${JSON.stringify({ error: "❌ AI API Key 未配置。请在设置页面填入 API Key 后再试" })}\n\n`
+          )
+        );
+        controller.enqueue(
+          encoder.encode(
+            `event: done\ndata: ${JSON.stringify({ status: "error" })}\n\n`
+          )
+        );
+        controller.close();
+      },
+    });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  }
+
   if (!message?.trim()) {
     return Response.json({ error: "message is required" }, { status: 400 });
   }
@@ -471,7 +517,7 @@ export async function POST(req: NextRequest) {
 
         // Agent loop (max 25 turns)
         for (let turn = 0; turn < 25; turn++) {
-          const response = await client.chat.completions.create({
+          const response = await getClient().chat.completions.create({
             model: MODEL,
             messages: conv,
             tools: availableTools.length > 0 ? availableTools : undefined,

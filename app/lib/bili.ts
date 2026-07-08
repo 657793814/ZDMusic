@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { getConfigVar } from "@/app/lib/config";
 
 export interface BiliVideo {
   bvid: string;
@@ -36,7 +37,8 @@ const COMMON_HEADERS: Record<string, string> = {
 // Cookie header used for API requests that support cookie-based auth
 function buildCookieHeader(buvid3: string): string {
   const parts = [`buvid3=${buvid3}`];
-  if (process.env.BILIBILI_COOKIE_SESSDATA) parts.push(`SESSDATA=${process.env.BILIBILI_COOKIE_SESSDATA}`);
+  const sessdata = getConfigVar("BILIBILI_COOKIE_SESSDATA");
+  if (sessdata) parts.push(`SESSDATA=${sessdata}`);
   return parts.join("; ");
 }
 
@@ -98,9 +100,10 @@ async function delayBeforeApiCall() {
  * Otherwise fetches from B站首页, refreshing every 10 minutes.
  */
 async function ensureBuvid3(): Promise<string> {
-  // If env provides SESSDATA, use it for authentication
-  if (process.env.BILIBILI_COOKIE_SESSDATA) {
-    const buvid3FromCookie = process.env.BILIBILI_COOKIE_BUVID3 || "";
+  // Use pre-configured cookies from config if available
+  const sessdata = getConfigVar("BILIBILI_COOKIE_SESSDATA");
+  if (sessdata) {
+    const buvid3FromCookie = getConfigVar("BILIBILI_COOKIE_BUVID3");
     if (buvid3FromCookie) {
       cachedBuvid3 = buvid3FromCookie;
       buvid3FreshAt = Date.now();

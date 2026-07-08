@@ -1,23 +1,30 @@
 {
-  "name": "aura-music",
+  "name": "zdmusic",
   "version": "0.1.0",
-  "description": "AI Agent-powered Bilibili audio player. Listen to music anytime, anywhere.",
+  "description": "卓动悦听 - AI Agent-powered Bilibili audio player, anytime, anywhere.",
   "license": "CC-BY-NC-SA-4.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "tauri": "tauri",
+    "tauri:dev": "zsh -l -c 'tauri dev'",
+    "tauri:build": "zsh -l -c 'tauri build'"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.123",
-    "next": "16.2.4",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
+    "bv2mp3": "^4.0.0",
+    "next": "^16.2.4",
     "openai": "^6.42.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@tauri-apps/cli": "^2.11.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
