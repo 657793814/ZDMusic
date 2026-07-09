@@ -3,22 +3,50 @@
 import { AmbientBackground, DanmakuOverlay, FullScreenVisualizer, Logo, ModeSwitch, LyricsDisplay } from "@/app/components/atoms";
 import {
   AgentChat,
+  AlbumGrid,
   ClockPanel,
   Player,
   Playlist,
   StatusBar,
 } from "@/app/components/organisms";
+import { Equalizer } from "@/app/components/molecules/Equalizer";
+import { SleepTimer } from "@/app/components/molecules/SleepTimer";
 import { SettingsDialog } from "@/app/components/molecules/SettingsDialog";
 import { usePlayer } from "@/app/context/PlayerContext";
 import { useI18n } from "@/app/lib/i18n";
-import { useEffect, useState } from "react";
+import { useEqualizer } from "@/app/hooks/useEqualizer";
+import { useKeyboardShortcuts } from "@/app/hooks/useKeyboardShortcuts";
+import { useMediaSession } from "@/app/hooks/useMediaSession";
+import { useSleepTimer } from "@/app/hooks/useSleepTimer";
+import { useEffect, useRef, useState } from "react";
 import { useLyrics } from "@/app/hooks/useLyrics";
 
 export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { analyser, state, vizReady, flipped, toggleFlip, lyricsOpen, toggleLyrics, seek } = usePlayer();
+  const [showAlbumGrid, setShowAlbumGrid] = useState(false);
+  const { analyser, state, vizReady, flipped, toggleFlip, lyricsOpen, toggleLyrics, seek, next, prev, togglePlay, stop, setVolume } = usePlayer();
   const lyricsData = useLyrics(state.current);
   const { lang, cycleLang } = useI18n();
+
+  // Sleep timer
+  const sleepTimer = useSleepTimer(stop);
+
+  // Equalizer
+  const eq = useEqualizer();
+  const eqAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onTogglePlay: () => togglePlay(),
+    onPrev: prev,
+    onNext: next,
+    onVolumeUp: () => setVolume(Math.min(1, state.volume + 0.05)),
+    onVolumeDown: () => setVolume(Math.max(0, state.volume - 0.05)),
+    onMute: () => setVolume(state.volume > 0 ? 0 : 0.8),
+  });
+
+  // Media Session
+  useMediaSession(state.current, state.playing, prev, next, seek);
 
   // ESC 退出全屏/歌词模式
   useEffect(() => {
@@ -27,12 +55,13 @@ export default function Home() {
         e.preventDefault();
         if (flipped) toggleFlip();
         if (lyricsOpen) toggleLyrics();
+        if (showAlbumGrid) setShowAlbumGrid(false);
       }
     };
     if (!flipped && !lyricsOpen) return;
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [flipped, lyricsOpen, toggleFlip, toggleLyrics]);
+  }, [flipped, lyricsOpen, toggleFlip, toggleLyrics, showAlbumGrid]);
 
   return (
     <>
@@ -60,9 +89,8 @@ export default function Home() {
         />
       )}
 
-      {/* 正常 UI（点击按钮显示全屏模式，正常 UI 自动隐藏） */}
+      {/* 正常 UI */}
       <AmbientBackground key={vizReady ? "bg-on" : "bg-off"} analyser={analyser} playing={state.playing} />
-
       <DanmakuOverlay />
 
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
@@ -84,7 +112,34 @@ export default function Home() {
           >
             <Logo />
             <nav aria-label="Main" className="flex flex-wrap items-center gap-3 md:gap-4">
-              <ModeSwitch />
+              {/* 专辑视图切换 */}
+              <button
+                type="button"
+                onClick={() => setShowAlbumGrid((v) => !v)}
+                className="inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition-colors hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)]"
+                style={{
+                  borderColor: showAlbumGrid ? "var(--color-primary)" : "var(--color-outline-dim)",
+                  color: showAlbumGrid ? "var(--color-primary)" : "var(--color-outline)",
+                  fontFamily: "var(--font-body)",
+                }}
+                aria-label="专辑视图"
+                title="专辑视图"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                </svg>
+                专辑
+              </button>
+              <SleepTimer
+                active={sleepTimer.active}
+                remaining={sleepTimer.remaining}
+                onStart={sleepTimer.start}
+                onStop={sleepTimer.stop}
+                onAdd={sleepTimer.addMinutes}
+              />
               <button
                 type="button"
                 onClick={() => setSettingsOpen(true)}
@@ -112,13 +167,24 @@ export default function Home() {
           </header>
 
           <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 md:grid md:grid-cols-2 md:gap-3 md:p-4">
-            {/* 左侧：Player + Playlist */}
+            {/* 左侧 */}
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
+              {/* Player + EQ */}
               <Player />
-              <Playlist />
+              <Equalizer
+                bands={eq.bands}
+                onBandChange={eq.setBandGain}
+                onPresetChange={(name, bands) => eq.applyPreset(name)}
+                enabled={eq.enabled}
+                onToggleEnabled={eq.toggleEnabled}
+                currentPreset={eq.currentPreset}
+              />
+
+              {/* Playlist / AlbumGrid toggle */}
+              {showAlbumGrid ? <AlbumGrid /> : <Playlist />}
             </div>
 
-            {/* 右侧：ClockPanel + AgentChat */}
+            {/* 右侧 */}
             <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
               <div className="shrink-0"><ClockPanel /></div>
               <AgentChat />
@@ -128,6 +194,9 @@ export default function Home() {
           <StatusBar />
         </div>
       </div>
+
+      {/* 隐藏的 audio ref 供 EQ 使用 */}
+      <audio ref={eqAudioRef} className="hidden" />
     </>
   );
 }

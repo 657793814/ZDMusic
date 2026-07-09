@@ -1,12 +1,14 @@
 import { existsSync, readFileSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
 
 /**
  * Reads the shared app config file (written by the Settings UI).
- * The config file path is passed as ZD_CONFIG_FILE env var from Rust.
+ * Tauri 模式：路径由 Rust 通过 ZD_CONFIG_FILE 环境变量注入
+ * Web 模式：fallback 到 ~/.zdmusic/config.json
  */
 export function readConfig(): Record<string, string> {
-  const configFile = process.env.ZD_CONFIG_FILE;
-  if (!configFile) return {};
+  const configFile = process.env.ZD_CONFIG_FILE || join(homedir(), ".zdmusic", "config.json");
   try {
     if (existsSync(configFile)) {
       const raw = readFileSync(configFile, "utf-8");

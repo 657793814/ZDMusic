@@ -45,12 +45,12 @@ function buildCookieHeader(buvid3: string): string {
 let cachedKeys: { imgKey: string; subKey: string; ts: number } | null = null;
 let cachedBuvid3: string | null = null;
 let buvid3FreshAt = 0;
+let lastApiCallAt = 0;
 const BUVID3_REFRESH_INTERVAL = 10 * 60 * 1000; // refresh every 10 minutes
 let cachedVideoInfo: Record<string, { cid: string; title: string; ts: number }> | null = null;
 const VIDEO_INFO_TTL = 24 * 60 * 60 * 1000; // 24 hours
 const REQUEST_DELAY_MIN = 800; // ms between API calls
 const REQUEST_DELAY_MAX = 2000; // ms
-let lastApiCallAt = 0;
 
 function getMixinKey(imgKey: string, subKey: string): string {
   const raw = imgKey + subKey;
@@ -293,12 +293,15 @@ export async function getDanmaku(cid: string): Promise<DanmakuItem[]> {
   return items;
 }
 
-export async function searchVideos(
+async function searchVideosInternal(
   keyword: string,
-  page = 1
+  page: number,
+  forceFreshKeys: boolean
 ): Promise<{ total: number; videos: BiliVideo[] }> {
   await delayBeforeApiCall();
-  const { imgKey, subKey } = await getWbiKeys();
+  const { imgKey, subKey } = forceFreshKeys
+    ? await getWbiKeysFresh()
+    : await getWbiKeys();
   const mixinKey = getMixinKey(imgKey, subKey);
   const buvid3 = await ensureBuvid3();
 
@@ -364,4 +367,33 @@ export async function searchVideos(
     }));
 
   return { total: json.data.numResults ?? videos.length, videos };
+}
+
+// Force-refresh WBI keys (clear cache first, then fetch new ones)
+async function getWbiKeysFresh(): Promise<{ imgKey: string; subKey: string }> {
+  cachedKeys = null;
+  return getWbiKeys();
+}
+
+export async function searchVideos(
+  keyword: string,
+  page = 1
+): Promise<{ total: number; videos: BiliVideo[] }> {
+  // First attempt with cached keys
+  const first = await searchVideosInternal(keyword, page, false);
+
+  // If empty, retry once with fresh keys and buvid3
+  if (first.videos.length === 0) {
+    console.log(`[searchVideos] First attempt returned empty for "${keyword}", retrying with fresh keys...`);
+    // Invalidate buvid3 cache to force a new one
+    cachedBuvid3 = null;
+    buvid3FreshAt = 0;
+    const second = await searchVideosInternal(keyword, page, true);
+    if (second.videos.length > 0) {
+      console.log(`[searchVideos] Retry succeeded: ${second.videos.length} results`);
+      return second;
+    }
+  }
+
+  return first;
 }

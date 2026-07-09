@@ -16,11 +16,13 @@ import {
 
 type AgentCtxValue = AgentState & {
   sendMessage: (text: string) => Promise<void>;
+  addAgentMessage: (content: string) => void;
   queueConvert: (bvids: string[]) => void;
   cancel: () => void;
   convertQueue: string[];
   convertingSet: Set<string>;
   convertedSet: Set<string>;
+  stageMsg: string;
 };
 
 const AgentContext = createContext<AgentCtxValue | null>(null);
@@ -136,6 +138,7 @@ export function AgentProvider({
   const { mode } = useMode();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [stageMsg, setStageMsg] = useState("");
 
   const [convertQueue, setConvertQueue] = useState<string[]>([]);
   const [convertingSet, setConvertingSet] = useState<Set<string>>(new Set());
@@ -149,6 +152,16 @@ export function AgentProvider({
     onMessage: (msg) => {
       if (msg.event === "output") {
         appendFromSdkPayload(msg.data, setMessages, setSessionId);
+        return;
+      }
+      if (msg.event === "status") {
+        const data = msg.data as any;
+        if (data?.detail) setStageMsg(data.detail);
+        else if (data?.stage) setStageMsg(data.stage);
+        return;
+      }
+      if (msg.event === "done") {
+        setStageMsg("");
         return;
       }
       if (msg.event === "error") {
@@ -206,6 +219,7 @@ export function AgentProvider({
 
   const cancel = useCallback(() => {
     sseCancel();
+    setStageMsg("");
     setConvertQueue([]);
     setConvertingSet(new Set());
   }, [sseCancel]);
@@ -216,6 +230,7 @@ export function AgentProvider({
     prevLoadingRef.current = loading;
 
     if (wasLoading && !loading) {
+      setStageMsg("");
       setConvertingSet((prev) => {
         if (prev.size > 0) {
           setConvertedSet((done) => {
@@ -258,19 +273,30 @@ export function AgentProvider({
     [send]
   );
 
+  // 直接注入消息，不走 AI API（用于快速搜索结果）
+  const addAgentMessage = useCallback((content: string) => {
+    const ts = Date.now();
+    setMessages((m) => [
+      ...m,
+      { id: newId(), role: "agent" as const, content, timestamp: ts },
+    ]);
+  }, []);
+
   const value = useMemo<AgentCtxValue>(
     () => ({
       messages,
       loading,
       sessionId,
       sendMessage,
+      addAgentMessage,
+      stageMsg,
       queueConvert,
       cancel,
       convertQueue,
       convertingSet,
       convertedSet,
     }),
-    [messages, loading, sessionId, sendMessage, queueConvert, cancel, convertQueue, convertingSet, convertedSet]
+    [messages, loading, sessionId, sendMessage, stageMsg, queueConvert, cancel, convertQueue, convertingSet, convertedSet]
   );
 
   return (

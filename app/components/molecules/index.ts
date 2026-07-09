@@ -1,6 +1,9 @@
 export { ChatMessage } from "./ChatMessage";
 export { CommandInput } from "./CommandInput";
 export { ControlBar } from "./ControlBar";
+export { DownloadManager } from "./DownloadManager";
 export { SeekBar } from "./SeekBar";
 export { TrackInfo } from "./TrackInfo";
 export { VolumeControl } from "./VolumeControl";
+export { Equalizer } from "./Equalizer";
+export { SleepTimer } from "./SleepTimer";

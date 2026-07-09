@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     root: path.resolve("."),
   },
   output: "standalone",
+  devIndicators: false,
 };
 
 export default nextConfig;

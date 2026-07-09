@@ -61,9 +61,43 @@ export type DictKey =
   | "local"
   | "cloud"
   | "title"
-  | "description";
+  | "description"
+  | "playlists"
+  | "playlist"
+  | "favorites"
+  | "addToPlaylist"
+  | "newPlaylist"
+  | "renamePlaylist"
+  | "deletePlaylist"
+  | "playlistName"
+  | "confirmDeletePlaylist"
+  | "savedToFavorites"
+  | "removedFromFavorites"
+  | "savedToPlaylist"
+  | "playlistView"
+  | "allTracks"
+  | "ok"
+  | "empty"
+  | "delete"
+  | "sleepTimer"
+  | "sleepTimerOff"
+  | "sleepTimerRemaining"
+  | "minutes"
+  | "hour"
+  | "stopPlayback"
+  | "equalizer"
+  | "eqEnabled"
+  | "eqDisabled"
+  | "eqFlat"
+  | "eqPop"
+  | "eqRock"
+  | "eqClassical"
+  | "eqVocal"
+  | "eqOpenAria"
+  | "eqCloseAria"
+  | "eqSliderAria";
 
-const zh: Record<DictKey, string> = {
+const zh: Record<string, string> = {
   prev: "上一首",
   play: "播放",
   pause: "暂停",
@@ -119,9 +153,49 @@ const zh: Record<DictKey, string> = {
   cloud: "云端",
   title: "卓动悦听",
   description: "在任何时间、任何地点播放音乐。",
+
+  /* 歌单 */
+  playlists: "歌单",
+  playlist: "歌单",
+  favorites: "我的收藏",
+  addToPlaylist: "收藏到歌单",
+  newPlaylist: "新建歌单",
+  renamePlaylist: "重命名",
+  deletePlaylist: "删除歌单",
+  playlistName: "歌单名称",
+  confirmDeletePlaylist: "确定删除歌单？歌单中的歌曲不会被删除。",
+  savedToFavorites: "已收藏",
+  removedFromFavorites: "已取消收藏",
+  savedToPlaylist: "已添加到",
+  playlistView: "歌单",
+  sleepTimer: "睡眠定时",
+  sleepTimerOff: "关闭",
+  sleepTimerRemaining: "剩余",
+  minutes: "分钟",
+  hour: "小时",
+  stopPlayback: "定时停止播放",
+
+  /* 均衡器 */
+  equalizer: "均衡器",
+  eqEnabled: "已启用",
+  eqDisabled: "已关闭",
+  eqFlat: "默认",
+  eqPop: "流行",
+  eqRock: "摇滚",
+  eqClassical: "古典",
+  eqVocal: "人声",
+  eqOpenAria: "展开均衡器",
+  eqCloseAria: "收起均衡器",
+  eqSliderAria: "{freq} Hz 均衡器，增益 {gain} dB",
+
+
+  allTracks: "所有歌曲",
+  ok: "确定",
+  empty: "空",
+  delete: "删除",
 };
 
-const en: Record<DictKey, string> = {
+const en: Record<string, string> = {
   prev: "Previous",
   play: "Play",
   pause: "Pause",
@@ -177,6 +251,46 @@ const en: Record<DictKey, string> = {
   cloud: "Cloud",
   title: "卓动悦听",
   description: "Listen to music anytime, anywhere.",
+
+  /* Playlists */
+  playlists: "Playlists",
+  playlist: "Playlist",
+  favorites: "Favorites",
+  addToPlaylist: "Add to playlist",
+  newPlaylist: "New playlist",
+  renamePlaylist: "Rename",
+  deletePlaylist: "Delete playlist",
+  playlistName: "Playlist name",
+  confirmDeletePlaylist: "Delete this playlist? Songs won't be deleted.",
+  savedToFavorites: "Saved to Favorites",
+  removedFromFavorites: "Removed from Favorites",
+  savedToPlaylist: "Added to",
+  playlistView: "Playlist",
+  sleepTimer: "Sleep timer",
+  sleepTimerOff: "Off",
+  sleepTimerRemaining: "Remaining",
+  minutes: "min",
+  hour: "hr",
+  stopPlayback: "Stop playback",
+
+  /* Equalizer */
+  equalizer: "Equalizer",
+  eqEnabled: "On",
+  eqDisabled: "Off",
+  eqFlat: "Flat",
+  eqPop: "Pop",
+  eqRock: "Rock",
+  eqClassical: "Classical",
+  eqVocal: "Vocal",
+  eqOpenAria: "Open equalizer",
+  eqCloseAria: "Close equalizer",
+  eqSliderAria: "{freq} Hz equalizer, gain {gain} dB",
+
+
+  allTracks: "All tracks",
+  ok: "OK",
+  empty: "Empty",
+  delete: "Delete",
 };
 
 const langOrder: Lang[] = ["zh-CN", "en-US"];
@@ -191,7 +305,7 @@ export interface I18nCtx {
 const I18nContext = createContext<I18nCtx | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const stored = (typeof window !== "undefined" && localStorage.getItem("aura-lang")) as Lang | null;
+  const stored = (typeof window !== "undefined" && localStorage.getItem("zdmusic-lang")) as Lang | null;
   const [lang, setLangState] = useState<Lang>(stored && langOrder.includes(stored) ? stored : "zh-CN");
 
   const dict = lang === "zh-CN" ? zh : en;
@@ -200,7 +314,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const setLang = useCallback(
     (nextLang: Lang) => {
       setLangState(nextLang);
-      localStorage.setItem("aura-lang", nextLang);
+      localStorage.setItem("zdmusic-lang", nextLang);
     },
     []
   );

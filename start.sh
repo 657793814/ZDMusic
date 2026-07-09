@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# AuraMusic 启动脚本
-# 用于启动 AuraMusic 音乐播放器应用
+# ZDMusic 启动脚本
+# 用于启动 ZDMusic 音乐播放器 Web应用
 
 set -e
 

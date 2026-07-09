@@ -31,6 +31,19 @@ export interface PlayerState {
   playMode: PlayMode;
 }
 
+export interface Playlist {
+  id: string;
+  name: string;
+  nameEn: string;
+  trackIds: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PlaylistStore {
+  playlists: Playlist[];
+}
+
 export interface AgentState {
   messages: ChatMessage[];
   loading: boolean;

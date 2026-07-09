@@ -33,7 +33,7 @@ function getClient(): OpenAI {
 // ============================================================
 // System Prompts
 // ============================================================
-const BASE_PROMPT = `你是 AuraMusic 的 AI 音频助手。保持简洁的中文终端风格语气。
+const BASE_PROMPT = `你是 ZDMusic 的 AI 音频助手。保持简洁的中文终端风格语气。
 
 ## 重要限制
 - 所有搜索和操作必须通过可用的函数工具完成
@@ -43,92 +43,19 @@ const LOCAL_PROMPT = `${BASE_PROMPT}
 
 ## 本地曲库搜索
 
-使用 search_tracks 函数检索曲库：
-  函数参数 q=关键词, limit=返回数量上限（默认20）
-返回 JSON: { "total": number, "tracks": [{ "id", "title", "author", "url", ... }] }
-
-搜索规则：
-- API 对 title、author、filename 做模糊匹配，关键词命中任一字段即返回
-- 曲库中部分曲目 author 字段为空，歌手名可能只出现在 title 或 filename 中，这很正常
-- 只要搜索返回了结果（total > 0），就说明命中了，应将这些结果推荐给用户
-- 可多次调用 search_tracks，使用不同关键词缩小范围
-- 搜索返回结果后直接推荐，不需要额外检查 API 是否正常
-- 用户说"推荐几首歌"等模糊请求时，可使用 q="" 获取全部曲库，再从中挑选
-- **输出 tracks 时，所有字段值必须原样复制，禁止缩写、提炼或重新组织 title**
-
-### 简繁体中文搜索策略（重要）
-- 曲库文件名可能混合使用简体和繁体中文，搜索 API 只做精确字符匹配
-- **先判断关键词是否包含简繁不同的字符**：如果关键词本身简繁体写法完全相同（如"大地恩情"、"雨天"、"花"），只需搜索一次
-- **只有简繁体写法不同时**（如"张学友"vs"張學友"、"听海"vs"聽海"），才发起简体和繁体两次搜索
-- 将搜索结果合并去重后推荐给用户
-- 如果两次搜索 total 都为 0，才告知用户未找到
-
-## 推荐输出格式（严格遵守）
-
-当向用户推荐歌曲时，先用自然语言简要介绍，然后 **必须** 将曲目放在独立的 tracks 代码块中。格式如下：
-
-\`\`\`tracks
-[
-  {"id":"xxx","title":"歌名","author":"歌手","url":"/audio/xxx.mp3"},
-  {"id":"yyy","title":"歌名2","author":"歌手2","url":"/audio/yyy.mp3"}
-]
-\`\`\`
-
-关键规则：
-1. 代码块标记必须用 \`\`\`tracks 开头，\`\`\` 结尾，各占独立一行
-2. 数据必须是合法 JSON 数组，**逐字复制** search_tracks 函数返回的 JSON 字段值（id、title、author、url），**严禁修改、缩短、重写或"美化"任何字段**
-3. 每个对象必须包含 id、title、author、url 四个字段
-4. 即使只推荐一首歌也要用此格式
-5. 不要把 tracks 代码块放在其他 markdown 代码块内
-6. 如果用户只是闲聊、提问，不需要输出 tracks 代码块
-7. title 字段必须与函数返回值完全一致，即使很长或包含下划线等字符也不能删减`;
+使用 search_tracks(q, limit=20)。API 对 title/author/filename 做模糊匹配，直接返回 JSON。
+- 结果 total>0 即命中，直接推荐
+- 简繁体差异先判断再决定是否搜两次，合并去重后返回
+- 输出用 \`\`\`tracks 代码块，字段必须原样复制 id/title/author/url，禁止修改`;
 
 const CLOUD_PROMPT = `${BASE_PROMPT}
 
 ## B站云端搜索
 
-用户当前处于云端模式。无论用户想找什么内容（音乐、科普、课程、演讲、访谈、纪录片等），都通过 B站 搜索。B站拥有各类视频资源，本应用会将视频转为音频供用户收听。
-
-### 搜索步骤
-1. 解析用户意图，提取搜索关键词
-2. 使用 search_bilibili 函数搜索：参数 keyword=关键词
-   返回 JSON: { "total": number, "videos": [{ "bvid", "title", "author", "duration", "play" }] }
-3. 分析搜索结果，筛选最相关的视频（通常 5-10 个），以 tracks 格式输出
-
-### 搜索输出格式（严格遵守）
-
-用 tracks 代码块输出，每个对象 **必须包含 bvid 字段**：
-
-\`\`\`tracks
-[
-  {"bvid":"BV1xxxxx","title":"视频标题","author":"UP主","duration":"4:32","url":"https://www.bilibili.com/video/BV1xxxxx"},
-  {"bvid":"BV2yyyyy","title":"视频标题2","author":"UP主2","duration":"12:05","url":"https://www.bilibili.com/video/BV2yyyyy"}
-]
-\`\`\`
-
-关键规则：
-1. 代码块标记必须用 \`\`\`tracks 开头，\`\`\` 结尾，各占独立一行
-2. 数据必须是合法 JSON 数组
-3. 每个对象必须包含 bvid、title、author、duration、url 五个字段，duration 来自 search_bilibili 函数返回
-4. url 格式为 https://www.bilibili.com/video/{bvid}
-5. bvid 字段来自函数返回结果，不要自行编造
-6. 如果用户只是闲聊、提问，不需要输出 tracks 代码块
-
-### 转换流程
-
-当用户想要将B站视频转为音频时：
-1. 使用 convert_bilibili_videos 函数，传入 bvids 数组（titles 可选，不传也可正常工作）
-2. 函数会自动完成下载、重命名、扫描的全流程，返回新增的 tracks 列表
-3. 将返回结果用 added 代码块输出（前端会自动添加到播放列表）：
-
-\`\`\`added
-[
-  {"id":"20250430/文件名.mp3","title":"标题","author":"作者","url":"/api/tracks/20250430/%E6%96%87%E4%BB%B6%E5%90%8D.mp3","date":"","filename":"文件名.mp3","subDir":"20250430","size":12345,"bvid":"BV1xxxxxx"}
-]
-\`\`\`
-
-- 直接复制函数返回的 track 对象，不要自行编造或修改任何字段
-- 即使只有一个文件也用数组格式`;
+使用 search_bilibili(keyword) 搜B站，结果 JSON 包含 bvid/title/author/duration/play。
+- 筛选最相关 5-10 条，用 \`\`\`tracks 输出，对象必须含 bvid/title/author/duration/url
+- 用户要转换时调用 convert_bilibili_videos(bvids, titles?)，函数自动下载→扫描→返回新 tracks
+- 转换结果用 \`\`\`added 输出，直接复制函数返回的 JSON 对象，不要修改`;
 
 // ============================================================
 // Tool Definitions
@@ -422,8 +349,15 @@ function sseEvent(sessionId: string, data: Record<string, unknown>) {
 export async function POST(req: NextRequest) {
   const { message, mode, history } = await req.json();
 
+  const startTime = Date.now();
+  const msgPreview = (message || "").slice(0, 60);
+  const historyCount = Array.isArray(history) ? history.length : 0;
+  console.log(`[Chat] >>> 收到请求 | mode=${mode} | msg="${msgPreview}" | history=${historyCount}条`);
+
   // 检查 API Key 是否已配置
   const apiKey = getConfigVar("ANTHROPIC_API_KEY", "");
+  const baseURL = getConfigVar("ANTHROPIC_BASE_URL", "https://apihub.agnes-ai.com/v1");
+  console.log(`[Chat] 配置: model=${MODEL} | baseURL=${baseURL} | apiKey=${apiKey ? "✓ " + apiKey.slice(0, 8) + "..." : "✗ 未配置"}`);
   if (!apiKey) {
     const stream = new ReadableStream({
       start(controller) {
@@ -488,7 +422,9 @@ export async function POST(req: NextRequest) {
       };
 
       try {
-        send("status", { stage: "starting" });
+        send("status", { stage: "starting", detail: "连接 AI 服务..." });
+
+        console.log(`[Chat] AI 流程开始 | 已过 ${Date.now() - startTime}ms`);
 
         const availableTools = mode === "cloud" ? CLOUD_TOOLS : LOCAL_TOOLS;
         const sessionId =
@@ -517,6 +453,11 @@ export async function POST(req: NextRequest) {
 
         // Agent loop (max 25 turns)
         for (let turn = 0; turn < 25; turn++) {
+          const turnStart = Date.now();
+          const convTokenEst = JSON.stringify(conv).length;
+          console.log(`[Chat]   ↳ turn ${turn + 1}: 发起 AI 调用 | conv≈${(convTokenEst / 1024).toFixed(1)}KB | 已过 ${Date.now() - startTime}ms`);
+          send("status", { stage: "ai_thinking", detail: `AI 思考中 (第${turn + 1}轮)...` });
+
           const response = await getClient().chat.completions.create({
             model: MODEL,
             messages: conv,
@@ -525,6 +466,7 @@ export async function POST(req: NextRequest) {
             temperature: 0.7,
           });
 
+          let firstChunkTime = 0;
           let assistantText = "";
           const toolCalls: Record<
             number,
@@ -532,6 +474,10 @@ export async function POST(req: NextRequest) {
           > = {};
 
           for await (const chunk of response) {
+            if (!firstChunkTime) {
+              firstChunkTime = Date.now();
+              console.log(`[Chat]     ↳ 收到首块 AI 响应 | 耗时 ${firstChunkTime - turnStart}ms`);
+            }
             const delta = chunk.choices[0]?.delta;
             if (!delta) continue;
 
@@ -553,6 +499,11 @@ export async function POST(req: NextRequest) {
               }
             }
           }
+
+          const turnElapsed = Date.now() - turnStart;
+          const textPreview = assistantText.slice(0, 80).split("\n").join(" ");
+          console.log(`[Chat]   ↳ turn ${turn + 1}: AI 返回 | ${turnElapsed}ms | text="${textPreview}" | tools=${Object.values(toolCalls).filter(tc => tc.name).length}个`);
+
 
           const toolCallsList = Object.values(toolCalls).filter((tc) => tc.name);
 
@@ -587,6 +538,9 @@ export async function POST(req: NextRequest) {
 
           // No tool calls → finished
           if (toolCallsList.length === 0) break;
+
+          console.log(`[Chat]     ↳ 执行 ${toolCallsList.length} 个工具调用`);
+          send("status", { stage: "executing_tools", detail: `执行 ${toolCallsList.length} 个操作...` });
 
           // Execute each tool call
           for (const tc of toolCallsList) {
@@ -652,9 +606,11 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        const totalTime = Date.now() - startTime;
+        console.log(`[Chat] <<< 完成 | 总耗时 ${totalTime}ms | turns=${/* count turns */ "done"}`);
         send("done", { status: "completed" });
       } catch (err) {
-        console.error("Chat error:", err);
+        console.error(`[Chat] <<< 错误 ${Date.now() - startTime}ms:`, err);
         send("error", { error: String(err) });
       } finally {
         controller.close();

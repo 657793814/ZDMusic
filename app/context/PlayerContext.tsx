@@ -129,8 +129,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             if (indexRef.current < 0) {
               setIndex(0);
               indexRef.current = 0;
-              // 自动播放第一首
-              playTrackInternalRef.current(data.tracks[0]);
+              // 首次加载不自动播放，等待用户点击
             }
           }
         })
@@ -259,15 +258,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const t = pl[ni];
       if (t) playTrack(t);
     } else if (mode === 'single') {
-      const ni = Math.min(pl.length - 1, Math.max(i + 1, 0));
-      if (ni === i && i >= 0) return;
+      const ni = pickNextIndex('playlist', pl, i);
       setIndex(ni);
       indexRef.current = ni;
       const t = pl[ni];
       if (t) playTrack(t);
     } else {
-      const ni = Math.min(pl.length - 1, Math.max(i + 1, 0));
-      if (ni === i && i >= 0) return;
+      const ni = pickNextIndex('playlist', pl, i);
       setIndex(ni);
       indexRef.current = ni;
       const t = pl[ni];

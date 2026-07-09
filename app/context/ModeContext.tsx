@@ -19,7 +19,7 @@ type ModeCtxValue = {
 const ModeContext = createContext<ModeCtxValue | null>(null);
 
 export function ModeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeRaw] = useState<AppMode>("local");
+  const [mode, setModeRaw] = useState<AppMode>("cloud");
 
   const setMode = useCallback((m: AppMode) => setModeRaw(m), []);
 

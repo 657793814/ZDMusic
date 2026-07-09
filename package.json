@@ -13,7 +13,6 @@
     "tauri:build": "zsh -l -c 'tauri build'"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.123",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-autostart": "^2.5.1",
     "bv2mp3": "^4.0.0",

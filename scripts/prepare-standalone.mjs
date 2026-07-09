@@ -35,13 +35,13 @@ for (const f of readdirSync(standalone)) {
   }
 }
 
-// Install bv2mp3 so npx isn't needed at runtime
+// Install runtime deps so bv2mp3 etc are available
 const { execSync } = await import("child_process");
 const nvmSh = join(process.env.HOME || "", ".nvm/nvm.sh");
 if (existsSync(nvmSh)) {
   try {
     execSync(
-      `bash -l -c 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && npm install --no-optional --ignore-scripts 2>&1'`,
+      `bash -l -c 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && npm install --production --no-optional 2>&1'`,
       { cwd: standalone, stdio: "pipe", timeout: 180_000, shell: "/bin/bash", maxBuffer: 10 * 1024 * 1024 }
     );
     console.log("✓ bv2mp3 installed in standalone");
@@ -50,6 +50,14 @@ if (existsSync(nvmSh)) {
   }
 } else {
   console.log("ℹ️  nvm not available, skipping bv2mp3 install");
+}
+
+// Remove the large Anthropic Clude SDK native binary (197MB) if it was installed
+// This package was removed from package.json so this is now a no-op, kept for safety
+const claudeBinary = join(standalone, "node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64");
+if (existsSync(claudeBinary)) {
+  rmSync(claudeBinary, { recursive: true, force: true });
+  console.log("✓ pruned @anthropic-ai/claude-agent-sdk-darwin-arm64 binary");
 }
 
 console.log("✓ Standalone bundle ready");

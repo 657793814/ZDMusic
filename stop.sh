@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# AuraMusic 停止脚本
+# ZDMusic 停止脚本
 # 用于停止正在执行的后台播放服务
 
 set -e

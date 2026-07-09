@@ -186,8 +186,11 @@ function getButtonState(
   inPlaylist: Set<string>,
   convertQueue: string[],
   convertingSet: Set<string>,
-  convertedSet: Set<string>
+  convertedSet: Set<string>,
+  clickedSet: Set<string>
 ): ButtonState {
+  // 本地已点击优先显示"已排队"
+  if ((track.bvid && clickedSet.has(track.bvid)) || clickedSet.has(track.id)) return "queued";
   if (inPlaylist.has(track.id) || (track.bvid && inPlaylist.has(track.bvid))) return "added";
   if (track.bvid) {
     if (convertedSet.has(track.bvid)) return "added";
@@ -204,14 +207,19 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
   const { t } = useI18n();
   const inPlaylist = new Set(state.playlist.map((tr) => tr.id));
 
+  // 本地追踪已点击添加的按钮，确保即时回显"已排队"
+  const [clickedSet, setClickedSet] = useState<Set<string>>(new Set());
+
   const isCloud = tracks.some((tr) => tr.bvid);
 
   const allDone = tracks.every((tr) => {
-    const s = getButtonState(tr, inPlaylist, convertQueue, convertingSet, convertedSet);
+    const s = getButtonState(tr, inPlaylist, convertQueue, convertingSet, convertedSet, clickedSet);
     return s !== "add";
   });
 
   const handleAdd = (track: TrackExt) => {
+    // 立即标记为已排队
+    setClickedSet((prev) => new Set(prev).add(track.bvid || track.id));
     if (track.bvid) {
       queueConvert([track.bvid]);
       fetchDanmaku(track.bvid);
@@ -223,9 +231,15 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
   const handleAddAll = () => {
     if (isCloud) {
       const bvids = tracks
-        .filter((t) => t.bvid && getButtonState(t, inPlaylist, convertQueue, convertingSet, convertedSet) === "add")
+        .filter((t) => t.bvid && getButtonState(t, inPlaylist, convertQueue, convertingSet, convertedSet, clickedSet) === "add")
         .map((t) => t.bvid!);
       if (bvids.length) {
+        // 立即标记全部为已排队
+        setClickedSet((prev) => {
+          const next = new Set(prev);
+          bvids.forEach((bv) => next.add(bv));
+          return next;
+        });
         queueConvert(bvids);
         bvids.forEach((bv) => fetchDanmaku(bv));
       }
@@ -264,7 +278,7 @@ function TrackCards({ tracks }: { tracks: TrackExt[] }) {
       </div>
       <div className="max-h-[16rem] overflow-y-auto scrollbar-thin">
         {tracks.map((tr) => {
-          const btnState = getButtonState(tr, inPlaylist, convertQueue, convertingSet, convertedSet);
+          const btnState = getButtonState(tr, inPlaylist, convertQueue, convertingSet, convertedSet, clickedSet);
           const cfg = BTN_CONFIG[btnState];
           const label = cfg.labelKey === "Add" ? cfg.labelKey : t(cfg.labelKey as DictKey);
           return (

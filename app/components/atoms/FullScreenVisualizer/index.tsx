@@ -10,7 +10,7 @@ import {
 } from "./presets";
 
 // 持久化 key
-const STORAGE_KEY = "aura-fullscreen-preset";
+const STORAGE_KEY = "zdmusic-fullscreen-preset";
 
 type Props = {
   analyser: AnalyserNode | null;

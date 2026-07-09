@@ -2,6 +2,7 @@
 
 import { Badge } from "@/app/components/atoms/Badge";
 import { GlowDot } from "@/app/components/atoms/GlowDot";
+import { ModeSwitch } from "@/app/components/atoms/ModeSwitch";
 import { Label } from "@/app/components/atoms/Label";
 import { ChatMessage } from "@/app/components/molecules/ChatMessage";
 import { CommandInput } from "@/app/components/molecules/CommandInput";
@@ -43,7 +44,7 @@ const ThinkingCard = (
 );
 
 export function AgentChat() {
-  const { messages, loading, sessionId, sendMessage, cancel } = useAgent();
+  const { messages, loading, sessionId, sendMessage, cancel, stageMsg } = useAgent();
   const { t } = useI18n();
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -73,7 +74,7 @@ export function AgentChat() {
               className="text-[10px] font-medium tracking-[var(--tracking-label)] opacity-70"
               style={{ fontFamily: "var(--font-body)", color: "var(--color-outline)" }}
             >
-              {t("thinking")}
+              {stageMsg || t("thinking")}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -91,7 +92,7 @@ export function AgentChat() {
         </div>
       </article>
     );
-  }, [t("agentLabel"), t("thinking")]);
+  }, [t("agentLabel"), t("thinking"), stageMsg]);
 
   const rendered = useMemo(() => {
     if (!showThinking || messages.length === 0) {
@@ -135,6 +136,7 @@ export function AgentChat() {
           {t("neuralAgent")}
         </Label>
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          <ModeSwitch />
           {loading ? (
             <Badge label={t("processing")} variant="primary" />
           ) : (

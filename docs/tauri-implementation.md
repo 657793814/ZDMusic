@@ -214,8 +214,14 @@ Next.js (bili.ts)          → getConfigVar("BILIBILI_COOKIE_*")   → 读取同
 
 ### 3.2 配置文件位置
 
-- macOS: `~/Library/Application Support/com.zdmusic/config.json`（由 `dirs::config_dir()` 决定）
-- 前端通过 `process.env.ZD_CONFIG_FILE`（Rust 注入）获取路径
+- **Tauri 打包模式**：`~/Library/Application Support/com.zdmusic/config.json`（由 `dirs::config_dir()` 决定）
+  - Rust `build_server_command()` 将路径通过 `ZD_CONFIG_FILE` 环境变量注入子进程
+- **Web 开发模式**（`ZD_CONFIG_FILE` 未设置）：自动 fallback 到 `~/.zdmusic/config.json`
+  - 确保 `npm run dev` 也能正常读写配置，无需提前设置环境变量
+- 同一 fallback 逻辑也适用于：
+  - `app/lib/playlists-store.ts` → 歌单数据存 `~/.zdmusic/playlists.json`
+  - `app/lib/play-history.ts` → 播放历史存 `~/.zdmusic/play-history.json`
+- 所有数据文件共享同一目录，统一管理
 - 格式：
 
 ```json

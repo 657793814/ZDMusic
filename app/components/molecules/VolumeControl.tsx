@@ -37,8 +37,8 @@ export function VolumeControl({ volume, onChange }: Props) {
             <path d="M18.5 6.5a8.5 8.5 0 010 11" strokeLinecap="round" />
           </svg>
         )}
-      </span>
-      <label className="sr-only" htmlFor="aura-volume">
+        </span>
+      <label className="sr-only" htmlFor="zdmusic-volume">
         {t("volume")}
       </label>
       <div className="relative flex flex-1 items-center" style={{ height: "18px" }}>
@@ -58,7 +58,7 @@ export function VolumeControl({ volume, onChange }: Props) {
           />
         </div>
         <input
-          id="aura-volume"
+          id="zdmusic-volume"
           type="range"
           min={0}
           max={1}
