@@ -44,3 +44,30 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ======================
+# 卓动悦听 项目专用
+# ======================
+
+# 构建产物
+/dist/
+
+# Tauri 编译产物
+/src-tauri/target/
+
+# 日志
+/logs/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+
+# 启动日志（开发测试时生成）
+start.sh
+stop.sh

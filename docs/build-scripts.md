@@ -118,3 +118,19 @@ export NVM_DIR="$HOME/.nvm"
 ### DMG 生成跳过
 
 默认 `./scripts/build.sh` 不生成 DMG，需加 `--dmg` 参数。DMG 体积上限可在脚本中修改 `-size` 参数。
+---
+
+## `.gitignore` 补充说明
+
+除了 Next.js 默认的 gitignore 规则外，额外需要忽略的目录和文件：
+
+| 路径 | 说明 |
+|------|------|
+| `/dist/` | Tauri `frontendDist` 指向的加载页，每次构建生成 |
+| `/src-tauri/target/` | Rust 编译产物，体积巨大（包含 `.app`/`.dmg`） |
+| `/logs/` | 运行时日志输出目录 |
+| `start.sh` / `stop.sh` | 本地开发用启动/停止脚本 |
+| `.vscode/` / `.idea/` | IDE 配置 |
+| `*.swp` / `*.swo` / `*~` | 编辑器临时文件 |
+
+> **注意**：`src-tauri/target/` 可能数 GB，强烈建议 gitignore。如果团队需要保留编译缓存，可以考虑只忽略其中的 `bundle/` 目录（存放 `.app`/`.dmg`）而保留 `debug/` 和 `release/`。
