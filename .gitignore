@@ -22,7 +22,6 @@ node_modules
 /build
 
 # misc
-.DS_Store
 *.pem
 
 # debug
@@ -51,9 +50,12 @@ next-env.d.ts
 
 # 构建产物
 /dist/
+.next/
+/out/
 
 # Tauri 编译产物
 /src-tauri/target/
+*.dmg
 
 # 日志
 /logs/
@@ -65,9 +67,6 @@ next-env.d.ts
 *.swo
 *~
 
-# OS
-.DS_Store
-
-# 启动日志（开发测试时生成）
+# 启动脚本（本地生成）
 start.sh
 stop.sh

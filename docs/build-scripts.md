@@ -127,7 +127,9 @@ export NVM_DIR="$HOME/.nvm"
 | 路径 | 说明 |
 |------|------|
 | `/dist/` | Tauri `frontendDist` 指向的加载页，每次构建生成 |
+| `/.next/` | Next.js 构建缓存，可重新生成 |
 | `/src-tauri/target/` | Rust 编译产物，体积巨大（包含 `.app`/`.dmg`） |
+| `*.dmg` | DMG 安装包，提交到远端会被拒绝（文件太大） |
 | `/logs/` | 运行时日志输出目录 |
 | `start.sh` / `stop.sh` | 本地开发用启动/停止脚本 |
 | `.vscode/` / `.idea/` | IDE 配置 |
