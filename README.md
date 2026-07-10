@@ -85,7 +85,7 @@
 - **pnpm**（推荐）或 npm
 - **AI API Key**（任一即可）
   - [DeepSeek](https://platform.deepseek.com/)（推荐，性价比高）
-  - [Agnes AI](https://apihub.agnes-ai.com/)（国内大模型聚合平台）
+  - [Agnes AI](https://apihub.agnes-ai.com/)
 
 ### Web 模式（开发调试）
 
