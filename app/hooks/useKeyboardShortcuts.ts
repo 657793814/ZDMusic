@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface ShortcutHandlers {
   onTogglePlay: () => void;
@@ -11,37 +11,41 @@ interface ShortcutHandlers {
 }
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Don't fire when typing in inputs
       const tag = (e.target as HTMLElement).tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
+      const h = handlersRef.current;
       switch (e.code) {
         case "Space":
           e.preventDefault();
-          handlers.onTogglePlay();
+          h.onTogglePlay();
           break;
         case "ArrowLeft":
-          handlers.onPrev();
+          h.onPrev();
           break;
         case "ArrowRight":
-          handlers.onNext();
+          h.onNext();
           break;
         case "ArrowUp":
           e.preventDefault();
-          handlers.onVolumeUp();
+          h.onVolumeUp();
           break;
         case "ArrowDown":
           e.preventDefault();
-          handlers.onVolumeDown();
+          h.onVolumeDown();
           break;
         case "KeyM":
-          handlers.onMute();
+          h.onMute();
           break;
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handlers]);
+  }, []);
 }
