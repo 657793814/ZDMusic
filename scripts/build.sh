@@ -2,8 +2,8 @@
 # ============================================
 # 卓动悦听 — 一键打包脚本
 # 用法:
-#   ./scripts/build.sh           # 构建 .app + .dmg
-#   ./scripts/build.sh --no-dmg  # 仅构建 .app，跳过 DMG
+#   ./scripts/build.sh           # 构建 .dmg
+#   ./scripts/build.sh --app     # 仅构建 .app，跳过 DMG
 #   ./scripts/build.sh --help    # 查看帮助
 # ============================================
 set -euo pipefail
@@ -58,10 +58,10 @@ du -sh "$APP_PATH"
 SKIP_DMG=false
 for arg in "$@"; do
   case "$arg" in
-    --no-dmg|-n) SKIP_DMG=true ;;
+    --app|-a) SKIP_DMG=true ;;
     --help|-h)
       echo "用法: $0 [选项]"
-      echo "  --no-dmg  仅构建 .app，跳过 DMG"
+      echo "  --app     仅构建 .app，跳过 DMG"
       echo "  --help    显示此帮助"
       exit 0
       ;;
