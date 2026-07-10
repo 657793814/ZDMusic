@@ -28,6 +28,7 @@ export default function Home() {
   const prevVolumeRef = useRef(0.8);
   const lyricsData = useLyrics(state.current);
   const { lang, cycleLang } = useI18n();
+  const mainRef = useRef<HTMLDivElement>(null);
 
   // Sleep timer
   const sleepTimer = useSleepTimer(stop);
@@ -35,6 +36,39 @@ export default function Home() {
   // Equalizer
   const eq = useEqualizer();
   const eqAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // 🔑 强制获取键盘焦点（Tauri WKWebView 需要）
+  // macOS webview 启动后不会自动传递键盘事件到 JS，
+  // 必须有一个 focusable 元素实际拥有焦点才能接收
+  useEffect(() => {
+    const focusMain = () => {
+      if (mainRef.current) {
+        mainRef.current.focus({ preventScroll: true });
+        // 如果聚焦失败，fallback 到 body
+        if (document.activeElement !== mainRef.current) {
+          document.body.focus();
+        }
+      }
+    };
+    // 立即聚焦
+    focusMain();
+    // 延迟重试（webview 还没加载完成时第一次聚焦可能失败）
+    const t1 = setTimeout(focusMain, 100);
+    const t2 = setTimeout(focusMain, 500);
+    // 窗口重新获得焦点时
+    window.addEventListener("focus", focusMain);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") focusMain();
+    });
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("focus", focusMain);
+      document.removeEventListener("visibilitychange", focusMain);
+    };
+  }, []);
+
+
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -105,7 +139,13 @@ export default function Home() {
 
       <div className="flex h-dvh items-center justify-center overflow-hidden p-3 text-[color:var(--color-on-surface)] md:p-6 lg:p-8">
         <div
-          className="flex h-[min(98dvh,75rem)] w-full max-w-7xl flex-col overflow-hidden rounded-2xl"
+          ref={mainRef}
+          tabIndex={0}
+          className="flex h-[min(98dvh,75rem)] w-full max-w-7xl flex-col overflow-hidden rounded-2xl outline-none"
+          onKeyDown={(e) => {
+            // 安全网：防止键盘事件逃逸
+            e.stopPropagation();
+          }}
           style={{
             backgroundColor: "var(--color-surface-raised)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3)",

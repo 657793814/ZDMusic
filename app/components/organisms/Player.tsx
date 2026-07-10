@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+
 import { ControlBar } from "@/app/components/molecules/ControlBar";
 import { SeekBar } from "@/app/components/molecules/SeekBar";
 import { TrackInfo } from "@/app/components/molecules/TrackInfo";
@@ -10,19 +10,6 @@ import { usePlayer } from "@/app/context/PlayerContext";
 
 export function Player() {
   const { state, next, prev, togglePlay, stop, seek, setVolume, playMode, setPlayMode, analyser, vizReady, flipped, toggleFlip, lyricsOpen, toggleLyrics } = usePlayer();
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
-      if (e.code === "Space") {
-        e.preventDefault();
-        void togglePlay();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [togglePlay]);
 
   return (
     <div

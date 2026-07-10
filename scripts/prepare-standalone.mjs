@@ -36,21 +36,49 @@ for (const f of readdirSync(standalone)) {
 }
 
 // Install runtime deps so bv2mp3 etc are available
+// Use a memory-safe approach: copy only production-relevant packages from source node_modules
+// instead of running npm install (which can OOM on memory-constrained systems)
 const { execSync } = await import("child_process");
-const nvmSh = join(process.env.HOME || "", ".nvm/nvm.sh");
-if (existsSync(nvmSh)) {
-  try {
-    execSync(
-      `bash -l -c 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && npm install --production --no-optional 2>&1'`,
-      { cwd: standalone, stdio: "pipe", timeout: 180_000, shell: "/bin/bash", maxBuffer: 10 * 1024 * 1024 }
-    );
-    console.log("✓ bv2mp3 installed in standalone");
-  } catch {
-    console.log("⚠️  npm install failed, standalone still works for most features");
+
+// Minimal set of packages needed at runtime (next server and API routes)
+const RUNTIME_PKGS = [
+  "next", "react", "react-dom", "styled-jsx",
+  "zod", "zustand", "scheduler",
+  "caniuse-lite", "source-map-js", "client-only",
+  "server-only", "tslib", "graceful-fs", "watchpack", "acorn",
+  "sharp", "bv2mp3", "axios", "openai", "nanoid",
+];
+const RUNTIME_SCOPED = [
+  ["@next", ["env", "swc-darwin-arm64"]],
+  ["@swc", ["helpers"]],
+  ["@emnapi", ["*"]],
+  ["@tauri-apps", ["api", "plugin-*"]],
+];
+
+const srcModules = resolve(root, "node_modules");
+
+// Copy regular packages
+for (const pkg of RUNTIME_PKGS) {
+  const src = join(srcModules, pkg);
+  const dest = join(standalone, "node_modules", pkg);
+  if (existsSync(src)) {
+    mkdirSync(dirname(dest), { recursive: true });
+    cpSync(src, dest, { recursive: true, force: true });
   }
-} else {
-  console.log("ℹ️  nvm not available, skipping bv2mp3 install");
 }
+
+// Copy scoped packages
+for (const [scope, subpkgs] of RUNTIME_SCOPED) {
+  mkdirSync(join(standalone, "node_modules", scope), { recursive: true });
+  for (const sub of subpkgs) {
+    const src = join(srcModules, scope, sub);
+    const dest = join(standalone, "node_modules", scope, sub);
+    if (existsSync(src)) {
+      cpSync(src, dest, { recursive: true, force: true });
+    }
+  }
+}
+console.log("✓ Production dependencies copied to standalone");
 
 // Remove the large Anthropic Clude SDK native binary (197MB) if it was installed
 // This package was removed from package.json so this is now a no-op, kept for safety

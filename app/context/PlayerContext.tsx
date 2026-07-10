@@ -109,9 +109,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // useAudioVisualizer 使用 audioElement（state，驱动响应式更新）
-  const { analyser, ready: vizReady, ensureConnected } = useAudioVisualizer(
+  const { analyser, ready: vizReady, ensureConnected, setMasterGain } = useAudioVisualizer(
     audioElement
   );
+
+  // 包裹 setVolume：同时控制 audioElement.volume（作为回退）+ AudioContext GainNode
+  // （createMediaElementSource 后 audioElement.volume 无效，必须由 GainNode 控制音量/静音）
+  const setVolumeWrapped = useCallback((n: number) => {
+    setVolume(n);
+    setMasterGain(n);
+  }, [setVolume, setMasterGain]);
 
   // 首次挂载自动扫描本地曲库
   useEffect(() => {
@@ -351,7 +358,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       prev,
       togglePlay: togglePlayWrapped,
       seek,
-      setVolume,
+      setVolume: setVolumeWrapped,
       stop,
       scanLocalTracks,
       playMode,
@@ -364,7 +371,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       ensureVisualizer: ensureConnected,
       vizReady,
     }),
-    [state, playTrackWrapped, addTracks, removeTrack, next, prev, togglePlayWrapped, seek, setVolume, stop, scanLocalTracks, playMode, setPlayMode, flipped, toggleFlip, analyser, ensureConnected, vizReady]
+    [state, playTrackWrapped, addTracks, removeTrack, next, prev, togglePlayWrapped, seek, setVolumeWrapped, stop, scanLocalTracks, playMode, setPlayMode, flipped, toggleFlip, analyser, ensureConnected, vizReady]
   );
 
   return (
