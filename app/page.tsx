@@ -25,6 +25,7 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAlbumGrid, setShowAlbumGrid] = useState(false);
   const { analyser, state, vizReady, flipped, toggleFlip, lyricsOpen, toggleLyrics, seek, next, prev, togglePlay, stop, setVolume } = usePlayer();
+  const prevVolumeRef = useRef(0.8);
   const lyricsData = useLyrics(state.current);
   const { lang, cycleLang } = useI18n();
 
@@ -42,7 +43,14 @@ export default function Home() {
     onNext: next,
     onVolumeUp: () => setVolume(Math.min(1, state.volume + 0.05)),
     onVolumeDown: () => setVolume(Math.max(0, state.volume - 0.05)),
-    onMute: () => setVolume(state.volume > 0 ? 0 : 0.8),
+    onMute: () => {
+      if (state.volume > 0) {
+        prevVolumeRef.current = state.volume;
+        setVolume(0);
+      } else {
+        setVolume(prevVolumeRef.current);
+      }
+    },
   });
 
   // Media Session
