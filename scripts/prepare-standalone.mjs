@@ -27,7 +27,7 @@ if (existsSync(nextStatic)) copyContents(nextStatic, resolve(standalone, ".next"
 const publicDir = resolve(root, "public");
 if (existsSync(publicDir)) copyContents(publicDir, resolve(standalone, "public"));
 
-// Clean up source files
+// Clean up source files (dev artifacts that leaked from next build)
 const keepFiles = new Set(["server.js", "package.json", "node_modules", ".next", "public"]);
 for (const f of readdirSync(standalone)) {
   if (!keepFiles.has(f)) {
@@ -35,29 +35,26 @@ for (const f of readdirSync(standalone)) {
   }
 }
 
-// Install runtime deps so bv2mp3 etc are available
-// Use a memory-safe approach: copy only production-relevant packages from source node_modules
-// instead of running npm install (which can OOM on memory-constrained systems)
 const { execSync } = await import("child_process");
 
-// Minimal set of packages needed at runtime (next server and API routes)
+// ── Step 1: Copy essential Next.js runtime deps from source node_modules ──
+// These must be available for the Next.js server to start.
 const RUNTIME_PKGS = [
   "next", "react", "react-dom", "styled-jsx",
   "zod", "zustand", "scheduler",
   "caniuse-lite", "source-map-js", "client-only",
   "server-only", "tslib", "graceful-fs", "watchpack", "acorn",
-  "sharp", "bv2mp3", "axios", "openai", "nanoid",
+  "sharp", "axios", "openai", "nanoid",
 ];
 const RUNTIME_SCOPED = [
   ["@next", ["env", "swc-darwin-arm64"]],
   ["@swc", ["helpers"]],
   ["@emnapi", ["*"]],
-  ["@tauri-apps", ["api", "plugin-*"]],
+  ["@tauri-apps", ["api", "plugin-api", "plugin-http"]],
 ];
 
 const srcModules = resolve(root, "node_modules");
 
-// Copy regular packages
 for (const pkg of RUNTIME_PKGS) {
   const src = join(srcModules, pkg);
   const dest = join(standalone, "node_modules", pkg);
@@ -67,7 +64,6 @@ for (const pkg of RUNTIME_PKGS) {
   }
 }
 
-// Copy scoped packages
 for (const [scope, subpkgs] of RUNTIME_SCOPED) {
   mkdirSync(join(standalone, "node_modules", scope), { recursive: true });
   for (const sub of subpkgs) {
@@ -78,14 +74,32 @@ for (const [scope, subpkgs] of RUNTIME_SCOPED) {
     }
   }
 }
-console.log("✓ Production dependencies copied to standalone");
 
-// Remove the large Anthropic Clude SDK native binary (197MB) if it was installed
-// This package was removed from package.json so this is now a no-op, kept for safety
+// ── Step 2: Install bv2mp3 (and its dependencies) from npm ──
+// The local workspace copy of bv2mp3 is a pnpm-linked source-only package
+// without its own node_modules. npm install fetches the publish-ready version
+// with all transitive dependencies included.
+console.log("Installing bv2mp3...");
+try {
+  execSync("npm install bv2mp3@4.0.0 --no-audit --no-fund --loglevel=error", {
+    cwd: standalone,
+    stdio: "pipe",
+    timeout: 120_000,
+    shell: "/bin/bash",
+    maxBuffer: 5 * 1024 * 1024,
+  });
+  const bv2mp3Path = join(standalone, "node_modules/bv2mp3/src/index.js");
+  if (existsSync(bv2mp3Path)) {
+    console.log("✓ bv2mp3 installed");
+  }
+} catch (e) {
+  console.warn("⚠️  bv2mp3 install failed, B站下载功能不可用:", e.message?.slice(0, 120));
+}
+
+// ── Step 3: Remove the huge Anthropic SDK binary if it snuck in ──
 const claudeBinary = join(standalone, "node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64");
 if (existsSync(claudeBinary)) {
   rmSync(claudeBinary, { recursive: true, force: true });
-  console.log("✓ pruned @anthropic-ai/claude-agent-sdk-darwin-arm64 binary");
 }
 
 console.log("✓ Standalone bundle ready");
