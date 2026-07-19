@@ -10,7 +10,7 @@
     "lint": "eslint",
     "tauri": "tauri",
     "tauri:dev": "zsh -l -c 'tauri dev'",
-    "tauri:build": "zsh -l -c 'tauri build'"
+    "tauri:build": "zsh -l -c 'bash scripts/build.sh'"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

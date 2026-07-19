@@ -37,7 +37,25 @@ for (const f of readdirSync(standalone)) {
 
 const { execSync } = await import("child_process");
 
-// ── Step 1: Copy essential Next.js runtime deps from source node_modules ──
+// ── Step 1: Prune devDependencies from standalone ──
+// `next build --output=standalone` copies the entire node_modules as-is,
+// including devDependencies like typescript, eslint, @tauri-apps/cli, etc.
+// These are NOT needed at runtime and bloat the final .app to ~500MB.
+console.log("Pruning devDependencies from standalone...");
+try {
+  execSync("npm prune --production --no-audit --no-fund --loglevel=error", {
+    cwd: standalone,
+    stdio: "pipe",
+    timeout: 60_000,
+    shell: "/bin/bash",
+  });
+  console.log("✓ devDependencies pruned");
+} catch (e) {
+  console.warn("⚠️  prune failed (continuing):", e.message?.slice(0, 120));
+}
+
+// ── Step 2: Copy essential Next.js runtime deps from source node_modules ──
+// Restore any packages that were wrongly pruned or need specific versions.
 // These must be available for the Next.js server to start.
 const RUNTIME_PKGS = [
   "next", "react", "react-dom", "styled-jsx",
@@ -75,7 +93,7 @@ for (const [scope, subpkgs] of RUNTIME_SCOPED) {
   }
 }
 
-// ── Step 2: Install bv2mp3 (and its dependencies) from npm ──
+// ── Step 3: Install bv2mp3 (and its dependencies) from npm ──
 // The local workspace copy of bv2mp3 is a pnpm-linked source-only package
 // without its own node_modules. npm install fetches the publish-ready version
 // with all transitive dependencies included.
@@ -96,7 +114,7 @@ try {
   console.warn("⚠️  bv2mp3 install failed, B站下载功能不可用:", e.message?.slice(0, 120));
 }
 
-// ── Step 3: Remove the huge Anthropic SDK binary if it snuck in ──
+// ── Step 4: Remove the huge Anthropic SDK binary if it snuck in ──
 const claudeBinary = join(standalone, "node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64");
 if (existsSync(claudeBinary)) {
   rmSync(claudeBinary, { recursive: true, force: true });

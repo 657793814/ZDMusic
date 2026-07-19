@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTheme } from "@/app/context/ThemeContext";
 
 type Props = {
   open: boolean;
@@ -57,6 +58,7 @@ export function SettingsDialog({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloading, setReloading] = useState(false);
+  const { themeId, themes, setTheme } = useTheme();
 
   // Load config via Next.js API (no Tauri ACL involved)
   const loadConfig = useCallback(async () => {
@@ -208,6 +210,69 @@ export function SettingsDialog({ open, onClose }: Props) {
             </p>
           </div>
 
+          {/* === 主题选择 === */}
+          <div>
+            <label
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "var(--color-outline)", fontFamily: "var(--font-body)" }}
+            >
+              🎨 主题
+            </label>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {themes.map((t) => {
+                const active = t.id === themeId;
+                const bg = t.tokens['--color-surface'];
+                const accent = t.tokens['--color-primary'];
+                const sub = t.tokens['--color-secondary'];
+
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTheme(t.id)}
+                    className="group relative flex flex-col items-center gap-1.5 rounded-xl p-3 text-center transition-all duration-300"
+                    style={{
+                      backgroundColor: active
+                        ? "color-mix(in srgb, var(--color-primary) 15%, transparent)"
+                        : "var(--color-surface-dim)",
+                      border: active
+                        ? "1.5px solid var(--color-primary)"
+                        : "1px solid var(--color-outline-dim)",
+                    }}
+                  >
+                    <div
+                      className="h-8 w-full rounded-lg flex items-center justify-center gap-1"
+                      style={{ backgroundColor: bg }}
+                    >
+                      <span
+                        className="inline-block h-3 w-3 rounded-full"
+                        style={{ backgroundColor: accent }}
+                      />
+                      <span
+                        className="inline-block h-3 w-3 rounded-full"
+                        style={{ backgroundColor: sub }}
+                      />
+                    </div>
+                    <span
+                      className="text-[11px] font-medium"
+                      style={{
+                        color: active
+                          ? "var(--color-primary)"
+                          : "var(--color-on-surface)",
+                        fontFamily: "var(--font-body)",
+                      }}
+                    >
+                      {t.emoji} {t.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px]" style={{ color: "var(--color-outline)" }}>
+              切换主题自动保存，刷新后保留。
+            </p>
+          </div>
+
           {/* === 环境变量配置 === */}
           <div>
             <h3
@@ -232,7 +297,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                     {field.label}
                   </label>
                   <input
-                    type={field.password ? "password" : "***"}
+                    type={field.password ? "password" : "text"}
                     placeholder={field.placeholder}
                     value={envVals[field.key] ?? ""}
                     onChange={(e) =>

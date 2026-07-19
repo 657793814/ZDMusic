@@ -14,6 +14,7 @@ import { SleepTimer } from "@/app/components/molecules/SleepTimer";
 import { SettingsDialog } from "@/app/components/molecules/SettingsDialog";
 import { usePlayer } from "@/app/context/PlayerContext";
 import { useI18n } from "@/app/lib/i18n";
+import { useTheme } from "@/app/context/ThemeContext";
 import { useEqualizer } from "@/app/hooks/useEqualizer";
 import { useKeyboardShortcuts } from "@/app/hooks/useKeyboardShortcuts";
 import { useMediaSession } from "@/app/hooks/useMediaSession";
@@ -23,6 +24,7 @@ import { useLyrics } from "@/app/hooks/useLyrics";
 
 export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { themeId, themes, theme } = useTheme();
   const [showAlbumGrid, setShowAlbumGrid] = useState(false);
   const { analyser, state, vizReady, flipped, toggleFlip, lyricsOpen, toggleLyrics, seek, next, prev, togglePlay, stop, setVolume } = usePlayer();
   const prevVolumeRef = useRef(0.8);
@@ -188,6 +190,29 @@ export default function Home() {
                 onStop={sleepTimer.stop}
                 onAdd={sleepTimer.addMinutes}
               />
+              {/* 主题快速切换 */}
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full transition-all hover:scale-110"
+                aria-label="切换主题"
+                title={`当前: ${theme.emoji} ${theme.name} — 点击换肤`}
+                style={{
+                  backgroundColor: "color-mix(in srgb, var(--color-primary) 20%, transparent)",
+                  border: "1.5px solid color-mix(in srgb, var(--color-primary) 50%, transparent)",
+                }}
+              >
+                <span className="inline-flex items-center gap-0.5">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: theme.tokens['--color-primary'] }}
+                  />
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: theme.tokens['--color-secondary'] }}
+                  />
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={() => setSettingsOpen(true)}

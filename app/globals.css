@@ -291,3 +291,51 @@ label {
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
+
+/* ─── 🎨 主题系统 ─── */
+
+/* 氛围光变量占位（由 ThemeContext 注入实际值） */
+:root {
+  --theme-gradient: none;
+}
+
+/* 全局过渡动画 — 主题切换时丝滑变化 */
+html {
+  transition: background-color var(--dur-long) var(--ease-emphasized);
+}
+
+*,
+*::before,
+*::after {
+  transition-property: background-color, color, border-color, box-shadow;
+  transition-duration: var(--dur-long);
+  transition-timing-function: var(--ease-standard);
+}
+
+/* 氛围光背景层（页面主容器使用 .ambient-bg 即可） */
+.ambient-bg {
+  position: relative;
+  background-color: var(--color-surface);
+}
+
+.ambient-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--theme-gradient);
+  transition: background var(--dur-long) var(--ease-standard);
+}
+
+.ambient-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 主题切换按钮的不缩放例外 — 按钮自身的 hover 不应继承基础过渡 */
+.theme-swatch-btn {
+  transition-property: background-color, border-color, box-shadow;
+  transition-duration: var(--dur-short);
+  transition-timing-function: var(--ease-standard);
+}

@@ -3,7 +3,7 @@
 
   **🎵 卓动悦听** — AI Agent 驱动的全功能音频播放器
 
-  <img alt="License" src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey" />
+  <img alt="License" src="https://img.shields.io/badge/License-Non--Commercial-blue" />
   <img alt="Node" src="https://img.shields.io/badge/Node.js-%3E%3D20-green" />
   <img alt="Tauri" src="https://img.shields.io/badge/Tauri-v2-purple" />
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-black" />
@@ -263,4 +263,6 @@ pnpm tauri:build
 ## 🐾 关于项目
 - **起源**：一个 AI Agent 驱动的 B站音频播放器实验项目
 - **定位**：本地优先、AI 增强、桌面友好的个人音乐播放器
-- **许可证**：[CC BY-NC-SA 4.0](LICENSE) — 禁止商业用途，衍生作品须以相同协议分发
+- **许可证**：[个人非商业用途许可协议](LICENSE) — 个人免费使用，商业用途需联系作者授权
+- **项目仓库**：https://github.com/657793814/ZDMusic
+- **作者邮箱**：657793814@qq.com
