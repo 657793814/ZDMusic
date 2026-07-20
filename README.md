@@ -1,7 +1,7 @@
 <div align="center">
   <img src="public/icon.ico" alt="卓动悦听" width="200" />
 
-  **🎵 卓动悦听** — AI Agent 驱动的全功能音频播放器
+  **🎵 卓动悦听** — AI Agent 驱动的全功能音频播放器（支持语音控制、听歌识曲）
 
   <img alt="License" src="https://img.shields.io/badge/License-Non--Commercial-blue" />
   <img alt="Node" src="https://img.shields.io/badge/Node.js-%3E%3D20-green" />
@@ -37,6 +37,8 @@
 | 功能 | 说明 |
 |------|------|
 | **睡眠定时** | 自定义时长后自动停止播放 |
+| **语音控制 🎤** | 使用麦克风说「下一首」「暂停」「播放 XXX」，阿里云 NLS 语音识别 |
+| **听歌识曲 🎵** | 点击音符按钮录音 10-15 秒，自动识别：本地指纹匹配（chromaprint）或 ACRCloud 云端百万曲库 |
 | **快捷操作** | 键盘快捷键（空格 播放/暂停，← → 切歌，↑ ↓ 音量） |
 | **Media Session** | macOS 锁屏/控制中心集成 |
 | **歌单管理** | 新建/重命名/删除歌单，收藏功能 |
@@ -230,6 +232,14 @@ pnpm tauri:build
 | `ANTHROPIC_MODEL` | AI 模型名 | `deepseek-chat` |
 | `ANTHROPIC_BASE_URL` | API 端点地址 | `https://api.deepseek.com` |
 | `MUSIC_DIR` | 本地音乐目录 | `~/Documents/bili` |
+| `MUSIC_RECOGNITION_MODE` | 听歌识曲模式：`local` 或 `cloud` | `local` |
+| `ACRCLOUD_ACCESS_KEY` | ACRCloud 听歌识曲密钥 | — |
+| `ACRCLOUD_ACCESS_SECRET` | ACRCloud 密钥 Secret | — |
+| `ACRCLOUD_HOST` | ACRCloud 服务地址 | `identify-china.acrcloud.cn` |
+| `ALIYUN_NLS_APP_KEY` | 阿里云 NLS 语音识别 AppKey | — |
+| `ALIYUN_ACCESS_KEY_ID` | 阿里云 RAM AccessKey | — |
+| `ALIYUN_ACCESS_KEY_SECRET` | 阿里云 RAM Secret | — |
+| `BILIBILI_COOKIE_SESSDATA` | B站 Cookie 提升稳定性 | — |
 
 ### 配置文件（Tauri 桌面端）
 
@@ -243,10 +253,70 @@ pnpm tauri:build
     "ANTHROPIC_API_KEY": "sk-xxx",
     "ANTHROPIC_MODEL": "deepseek-chat",
     "ANTHROPIC_BASE_URL": "https://api.deepseek.com",
-    "MUSIC_DIR": "/path/to/music"
+    "MUSIC_DIR": "/path/to/music",
+    "MUSIC_RECOGNITION_MODE": "local",
+    "ACRCLOUD_ACCESS_KEY": "***",
+    "ACRCLOUD_ACCESS_SECRET": "***",
+    "ALIYUN_NLS_APP_KEY": "***",
+    "ALIYUN_ACCESS_KEY_ID": "***",
+    "ALIYUN_ACCESS_KEY_SECRET": "***"
   }
 }
 ```
+
+---
+
+## 🎤 语音控制
+
+支持通过麦克风进行语音指令控制。
+
+### 用法
+
+1. 在设置页面（⚙️）配置阿里云 NLS 密钥：
+   - 访问 [nls.console.aliyun.com](https://nls.console.aliyun.com/) 创建项目获取 AppKey
+   - RAM 用户授权 `AliyunNLSSpeechRecognizer` 权限获取 AccessKey
+2. 点击播放器底部的 🎤 按钮
+3. 说出指令（支持中英文）：
+   - **播放控制**：下一首 / 上一首 / 暂停 / 播放
+   - **点歌**：播放 XXX
+   - **音量**：大声点 / 小声点
+
+> 语音识别使用的是阿里云 NLS 实时语音识别（基于 WebSocket MediaRecorder）。
+
+## 🎵 听歌识曲
+
+支持本地指纹匹配和云端 ACRCloud 识别两种模式。
+
+### 本地模式（默认）
+
+```bash
+# 1. 安装 fpcalc（chromaprint）
+brew install chromaprint
+
+# 2. 建立指纹索引（首次运行）
+curl -X POST http://localhost:3000/api/tracks/build-fingerprints
+
+# 3. 点击播放器底部的 🎵 按钮，录音 10-15 秒
+```
+
+- 识别结果会弹出歌曲卡片，点击「播放」直接跳转到本地文件
+- **指纹阈值 0.6**：适合大部分场景的匹配精度
+- 指纹库自动增量更新：重新调用 `/api/tracks/build-fingerprints` 只处理新增/变更文件
+
+### 云端模式（ACRCloud）
+
+```bash
+# 1. 在 https://console.acrcloud.cn/ 注册获取 Key/Secret
+# 2. 在设置页面填入密钥，模式切换为「云端」
+# 3. 🎵 按钮 → 录音 → ACRCloud 识别
+```
+
+- 曲库覆盖广（百万级），轻松识别冷门歌曲
+- 通过扬声器播放也能识别（专为 mic 录音优化）
+
+### 模式切换
+
+在设置页面（⚙️）→ 听歌识曲 → 选择「本地」或「云端」即可，无需重启。
 
 ---
 

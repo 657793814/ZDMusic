@@ -79,6 +79,7 @@ export type DictKey =
   | "ok"
   | "empty"
   | "delete"
+  | "send"
   | "sleepTimer"
   | "sleepTimerOff"
   | "sleepTimerRemaining"
@@ -95,7 +96,18 @@ export type DictKey =
   | "eqVocal"
   | "eqOpenAria"
   | "eqCloseAria"
-  | "eqSliderAria";
+  | "eqSliderAria"
+  | "voiceStart"
+  | "voiceStop"
+  | "voiceListening"
+  | "voiceProcessing"
+  | "musicRecognize"
+  | "musicRecognizeResult"
+  | "musicRecognizeError"
+  | "voicePermissionDenied"
+  | "voiceNoSpeech"
+  | "voiceError"
+  | "voiceNotSupported";
 
 const zh: Record<string, string> = {
   prev: "上一首",
@@ -193,6 +205,22 @@ const zh: Record<string, string> = {
   ok: "确定",
   empty: "空",
   delete: "删除",
+  send: "发送",
+
+  /* 语音输入 */
+  voiceStart: "按住说话",
+  voiceStop: "停止录音",
+  voiceListening: "正在听…",
+  voiceProcessing: "识别中…",
+
+  /* 听歌识曲 */
+  musicRecognize: "听歌识曲",
+  musicRecognizeResult: "识别结果",
+  musicRecognizeError: "识曲失败",
+  voicePermissionDenied: "麦克风权限被拒绝，请在系统设置中允许",
+  voiceNoSpeech: "未检测到语音",
+  voiceError: "语音识别出错",
+  voiceNotSupported: "当前环境不支持语音识别",
 };
 
 const en: Record<string, string> = {
@@ -291,6 +319,22 @@ const en: Record<string, string> = {
   ok: "OK",
   empty: "Empty",
   delete: "Delete",
+  send: "Send",
+
+  /* Voice Input */
+  voiceStart: "Hold to speak",
+  voiceStop: "Stop recording",
+  voiceListening: "Listening…",
+  voiceProcessing: "Recognizing…",
+
+  /* Music Recognition */
+  musicRecognize: "Identify Song",
+  musicRecognizeResult: "Recognition Result",
+  musicRecognizeError: "Recognition Failed",
+  voicePermissionDenied: "Microphone permission denied, please allow in system settings",
+  voiceNoSpeech: "No speech detected",
+  voiceError: "Speech recognition error",
+  voiceNotSupported: "Speech recognition is not supported in this environment",
 };
 
 const langOrder: Lang[] = ["zh-CN", "en-US"];

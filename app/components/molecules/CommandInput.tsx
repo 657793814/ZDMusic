@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useI18n } from "@/app/lib/i18n";
+import { VoiceInput } from "./VoiceInput";
 
 type Props = {
   onSubmit: (text: string) => void;
@@ -36,9 +37,9 @@ export function CommandInput({
   }, [value, syncCursor]);
 
   const submit = useCallback(() => {
-    const t_val = valueRef.current.trim();
-    if (!t_val || disabled) return;
-    onSubmit(t_val);
+    const trimmed = valueRef.current.trim();
+    if (!trimmed || disabled) return;
+    onSubmit(trimmed);
     setValue("");
   }, [disabled, onSubmit]);
 
@@ -51,8 +52,15 @@ export function CommandInput({
     requestAnimationFrame(syncCursor);
   };
 
+  const onVoiceRecognize = useCallback((text: string) => {
+    if (text.trim()) {
+      setValue(text.trim());
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, []);
+
   return (
-    <div className="w-full">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 rounded-full border bg-[var(--color-surface-raised)] px-4 py-2.5 transition-colors focus-within:border-[color:var(--color-primary)]"
         style={{
           borderColor: "var(--color-outline-dim)",
@@ -92,7 +100,7 @@ export function CommandInput({
           />
           <span
             ref={measureRef}
-            className="pointer-events-none invisible absolute top-0 left-0 whitespace-pre text-sm"
+            className="pointer-events-none absolute top-0 left-0 whitespace-pre text-sm"
             aria-hidden
             style={{ letterSpacing: "0.045em" }}
           />
@@ -111,6 +119,7 @@ export function CommandInput({
             }}
           />
         </div>
+        <VoiceInput onRecognize={onVoiceRecognize} disabled={disabled} />
       </div>
     </div>
   );

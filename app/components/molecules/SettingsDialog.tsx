@@ -52,6 +52,45 @@ const ENV_FIELDS: EnvField[] = [
   },
 ];
 
+const STT_FIELDS: EnvField[] = [
+  {
+    key: "ALIYUN_NLS_APP_KEY",
+    label: "阿里云 NLS AppKey",
+    placeholder: "请输入 AppKey",
+    hint: "语音识别服务密钥，在 nls.console.aliyun.com 获取",
+  },
+  {
+    key: "ALIYUN_ACCESS_KEY_ID",
+    label: "阿里云 AccessKey ID",
+    placeholder: "请输入 AccessKey ID",
+    hint: "RAM 访问控制的 AccessKey ID",
+    password: true,
+  },
+  {
+    key: "ALIYUN_ACCESS_KEY_SECRET",
+    label: "阿里云 AccessKey Secret",
+    placeholder: "请输入 AccessKey Secret",
+    hint: "RAM 访问控制的 AccessKey Secret",
+    password: true,
+  },
+];
+
+const ACR_FIELDS: EnvField[] = [
+  {
+    key: "ACRCLOUD_ACCESS_KEY",
+    label: "ACRCloud Access Key",
+    placeholder: "请输入 Access Key",
+    hint: "听歌识曲云端服务密钥，在 console.acrcloud.cn 获取",
+  },
+  {
+    key: "ACRCLOUD_ACCESS_SECRET",
+    label: "ACRCloud Access Secret",
+    placeholder: "请输入 Access Secret",
+    hint: "ACRCloud 密钥",
+    password: true,
+  },
+];
+
 export function SettingsDialog({ open, onClose }: Props) {
   const [musicDir, setMusicDir] = useState<string>("");
   const [envVals, setEnvVals] = useState<Record<string, string>>({});
@@ -289,6 +328,140 @@ export function SettingsDialog({ open, onClose }: Props) {
             </p>
             <div className="space-y-4">
               {ENV_FIELDS.map((field) => (
+                <div key={field.key}>
+                  <label
+                    className="mb-1 block text-[13px] font-medium"
+                    style={{ color: "var(--color-on-surface)", fontFamily: "var(--font-body)" }}
+                  >
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.password ? "password" : "text"}
+                    placeholder={field.placeholder}
+                    value={envVals[field.key] ?? ""}
+                    onChange={(e) =>
+                      setEnvVals((prev) => ({ ...prev, [field.key]: e.target.value }))
+                    }
+                    className="w-full rounded-xl px-3 py-2 text-sm"
+                    style={{
+                      backgroundColor: "var(--color-surface-dim)",
+                      color: "var(--color-on-surface)",
+                      border: "1px solid var(--color-outline-dim)",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  />
+                  <p className="mt-1 text-[11px]" style={{ color: "var(--color-outline)" }}>
+                    {field.hint}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* === 语音识别 === */}
+          <div className="border-t" style={{ borderColor: "var(--color-outline-dim)" }}>
+            <h3
+              className="mb-3 mt-4 text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "var(--color-outline)", fontFamily: "var(--font-body)" }}
+            >
+              🎤 语音识别（STT）
+            </h3>
+            <div className="space-y-4">
+              {STT_FIELDS.map((field) => (
+                <div key={field.key}>
+                  <label
+                    className="mb-1 block text-[13px] font-medium"
+                    style={{ color: "var(--color-on-surface)", fontFamily: "var(--font-body)" }}
+                  >
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.password ? "password" : "text"}
+                    placeholder={field.placeholder}
+                    value={envVals[field.key] ?? ""}
+                    onChange={(e) =>
+                      setEnvVals((prev) => ({ ...prev, [field.key]: e.target.value }))
+                    }
+                    className="w-full rounded-xl px-3 py-2 text-sm"
+                    style={{
+                      backgroundColor: "var(--color-surface-dim)",
+                      color: "var(--color-on-surface)",
+                      border: "1px solid var(--color-outline-dim)",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  />
+                  <p className="mt-1 text-[11px]" style={{ color: "var(--color-outline)" }}>
+                    {field.hint}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* === 听歌识曲 === */}
+          <div className="border-t" style={{ borderColor: "var(--color-outline-dim)" }}>
+            <h3
+              className="mb-3 mt-4 text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "var(--color-outline)", fontFamily: "var(--font-body)" }}
+            >
+              🎵 听歌识曲
+            </h3>
+
+            {/* 模式选择 */}
+            <div className="mb-4">
+              <label
+                className="mb-2 block text-[13px] font-medium"
+                style={{ color: "var(--color-on-surface)", fontFamily: "var(--font-body)" }}
+              >
+                识别模式
+              </label>
+              <div className="flex gap-2">
+                {[
+                  { value: "local", label: "本地", desc: "离线识别，仅限指纹库内有" },
+                  { value: "cloud", label: "云端", desc: "ACRCloud 百万曲库" },
+                ].map((opt) => {
+                  const active = (envVals["MUSIC_RECOGNITION_MODE"] || "local") === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        setEnvVals((prev) => ({ ...prev, ["MUSIC_RECOGNITION_MODE"]: opt.value }))
+                      }
+                      className="flex flex-1 flex-col items-center gap-1 rounded-xl px-3 py-2.5 text-center transition-all"
+                      style={{
+                        backgroundColor: active
+                          ? "color-mix(in srgb, var(--color-primary) 15%, transparent)"
+                          : "var(--color-surface-dim)",
+                        border: active
+                          ? "1.5px solid var(--color-primary)"
+                          : "1px solid var(--color-outline-dim)",
+                      }}
+                    >
+                      <span
+                        className="text-sm font-semibold"
+                        style={{
+                          color: active ? "var(--color-primary)" : "var(--color-on-surface)",
+                          fontFamily: "var(--font-body)",
+                        }}
+                      >
+                        {opt.label}
+                      </span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: "var(--color-outline)", fontFamily: "var(--font-body)" }}
+                      >
+                        {opt.desc}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ACRCloud 密钥 */}
+            <div className="space-y-4">
+              {ACR_FIELDS.map((field) => (
                 <div key={field.key}>
                   <label
                     className="mb-1 block text-[13px] font-medium"

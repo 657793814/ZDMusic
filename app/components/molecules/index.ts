@@ -7,3 +7,4 @@ export { TrackInfo } from "./TrackInfo";
 export { VolumeControl } from "./VolumeControl";
 export { Equalizer } from "./Equalizer";
 export { SleepTimer } from "./SleepTimer";
+export { VoiceInput } from "./VoiceInput";

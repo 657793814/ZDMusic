@@ -2,6 +2,7 @@
 
 
 import { ControlBar } from "@/app/components/molecules/ControlBar";
+import { MusicRecognizer } from "@/app/components/molecules/MusicRecognizer";
 import { SeekBar } from "@/app/components/molecules/SeekBar";
 import { TrackInfo } from "@/app/components/molecules/TrackInfo";
 import { VolumeControl } from "@/app/components/molecules/VolumeControl";
@@ -62,11 +63,15 @@ export function Player() {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M9 18V5l12-2v13" />
-              <circle cx="6" cy="18" r="3" />
-              <circle cx="18" cy="16" r="3" />
+              <path d="M4 3h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+              <line x1="8" y1="9" x2="16" y2="9" />
+              <line x1="8" y1="13" x2="16" y2="13" />
+              <line x1="8" y1="17" x2="12" y2="17" />
             </svg>
           </button>
+
+          {/* 听歌识曲 */}
+          <MusicRecognizer />
 
           {/* 页面翻转按钮 */}
           <button
