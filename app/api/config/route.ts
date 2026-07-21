@@ -31,6 +31,13 @@ export async function POST(request: NextRequest) {
     const dir = dirname(path);
     mkdirSync(dir, { recursive: true });
     writeFileSync(path, JSON.stringify(body, null, 2), "utf-8");
+
+    // 也同步写入 ~/.zdmusic/config.json，保证两边配置一致
+    const fallbackDir = join(homedir(), ".zdmusic");
+    mkdirSync(fallbackDir, { recursive: true });
+    const fallbackPath = join(fallbackDir, "config.json");
+    writeFileSync(fallbackPath, JSON.stringify(body, null, 2), "utf-8");
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

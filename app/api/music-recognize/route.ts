@@ -52,7 +52,7 @@ function saveAudio(audioBuffer: Buffer): { tmpDir: string; inputPath: string; pc
   const pcmPath = join(tmpDir, "sample.wav");
   writeFileSync(inputPath, audioBuffer);
   execSync(
-    `ffmpeg -y -i "${inputPath}" -ar 8000 -ac 1 -f wav "${pcmPath}"`,
+    `ffmpeg -y -i "${inputPath}" -ar 44100 -ac 1 -f wav "${pcmPath}"`,
     { stdio: "pipe", timeout: 30000 },
   );
   return { tmpDir, inputPath, pcmPath };

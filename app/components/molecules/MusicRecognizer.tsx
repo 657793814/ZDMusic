@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/app/lib/i18n";
 import { useRecorder } from "@/app/lib/useRecorder";
+import { useAgent } from "@/app/context/AgentContext";
+import { usePlayer } from "@/app/context/PlayerContext";
 
 type RecognizeResult = {
   title: string;
@@ -139,26 +141,30 @@ export function MusicRecognizer() {
     }
   }, []);
 
+  const agent = useAgent();
+  const player = usePlayer();
+
   /** 播放已识别的歌曲 */
   const playTrack = useCallback(() => {
     if (!result) return;
 
     if (result.local && result.trackId) {
-      // 本地模式：直接跳转到本地曲目
-      window.dispatchEvent(
-        new CustomEvent("music-recognize-play", { detail: { trackId: result.trackId } }),
-      );
+      // 本地模式：从当前播放列表中找到匹配的曲目并播放
+      const match = player.state.playlist.find((t) => t.id === result.trackId || t.title === result.title);
+      if (match) {
+        player.playTrack(match);
+      } else {
+        agent.sendMessage(`搜索并播放歌曲：${result.title} ${result.artists}`);
+      }
     } else {
-      // Cloud 模式：搜索曲库
+      // Cloud 模式：由 AI 助手搜索并播放
       const query = `${result.title} ${result.artists}`.trim();
-      window.dispatchEvent(
-        new CustomEvent("music-recognize-search", { detail: query }),
-      );
+      agent.sendMessage(`搜索并播放歌曲：${query}`);
     }
 
     setPhase("idle");
     setResult(null);
-  }, [result]);
+  }, [result, agent, player]);
 
   return (
     <div className="relative">
