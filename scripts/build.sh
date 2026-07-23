@@ -32,7 +32,17 @@ echo ""
 echo "🧹 清理旧构建残留..."
 rm -f "$BUNDLE_DIR/rw.*.dmg"
 rm -f "$DMG_DIR/卓动悦听_*.dmg"
-echo "   ✅ 旧临时文件已清理"
+
+# 清理 debug 编译产物（仅在 build 时，dev 模式不清理）
+if [ -d "src-tauri/target/debug" ]; then
+  echo "   🗑️ 清理 Debug 编译产物..."
+  rm -rf "src-tauri/target/debug"
+fi
+
+# 清理 Tauri 临时文件
+find "src-tauri/target" -name ".tmp_*" -delete 2>/dev/null || true
+
+echo "   ✅ 旧构建残留已清理"
 
 # ---------- Tauri 打包（含 beforeBuildCommand 中的 Next.js 构建 + 精简）----------
 echo ""
