@@ -27,13 +27,13 @@ const ENV_FIELDS: EnvField[] = [
   {
     key: "ANTHROPIC_BASE_URL",
     label: "AI API Base URL",
-    placeholder: "https://apihub.agnes-ai.com/v1",
+    placeholder: "https://opencode.ai/zen/v1",
     hint: "留空则使用默认地址",
   },
   {
     key: "ANTHROPIC_MODEL",
     label: "AI 模型",
-    placeholder: "agnes-2.0-flash",
+    placeholder: "deepseek-v4-flash-free",
     hint: "留空则使用默认模型",
   },
   {

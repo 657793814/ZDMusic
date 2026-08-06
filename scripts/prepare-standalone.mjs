@@ -63,6 +63,7 @@ const RUNTIME_PKGS = [
   "caniuse-lite", "source-map-js", "client-only",
   "server-only", "tslib", "graceful-fs", "watchpack", "acorn",
   "sharp", "axios", "openai", "nanoid",
+  "picocolors", "postcss", "lightningcss",
 ];
 const RUNTIME_SCOPED = [
   ["@next", ["env", "swc-darwin-arm64"]],

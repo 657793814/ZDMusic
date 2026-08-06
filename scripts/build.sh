@@ -18,7 +18,8 @@ echo "🔧 初始化环境..."
 export NVM_DIR="$HOME/.nvm"
 if [ -s "$NVM_DIR/nvm.sh" ]; then
   . "$NVM_DIR/nvm.sh"
-  nvm use 22.22.3 --silent 2>/dev/null || true
+  # 尝试使用 22.22.3，不存在则用默认版本
+  nvm use 22.22.3 --silent 2>/dev/null || nvm use default --silent 2>/dev/null || true
 fi
 
 export PATH="$HOME/.cargo/bin:$PATH"

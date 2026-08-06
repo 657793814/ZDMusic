@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
 import { homedir } from "os";
 import { dirname, join } from "path";
+import { readEffectiveConfig } from "@/app/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +13,10 @@ function getConfigPath(): string {
 }
 
 export async function GET() {
-  const path = getConfigPath();
+  // 返回合并后的有效配置（用户保存的本地配置优先，打包配置兜底），
+  // 保证设置界面显示的值与运行时实际使用的值一致
   try {
-    if (existsSync(path)) {
-      const raw = readFileSync(path, "utf-8");
-      return NextResponse.json(JSON.parse(raw));
-    }
-    return NextResponse.json({ music_dir: null, env_vars: {} });
+    return NextResponse.json(readEffectiveConfig());
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

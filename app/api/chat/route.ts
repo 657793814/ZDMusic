@@ -14,7 +14,9 @@ export const dynamic = "force-dynamic";
 // OpenAI Client — 对接 Agnes/DeepSeek 等 OpenAI 风格服务商
 // 懒加载: 避免 module 加载时因无 API Key 抛出异常导致整个路由 500
 // ============================================================
-const MODEL = "agnes-2.0-flash";
+function getModel(): string {
+  return getConfigVar("ANTHROPIC_MODEL", "deepseek-v4-flash-free");
+}
 
 let _client: OpenAI | null = null;
 let _clientVersion = 0;
@@ -182,7 +184,7 @@ async function convertBilibiliVideos(baseUrl: string, bvids: string[], titles?: 
   try {
     const nodeBin = process.execPath; // use same Node.js as the server itself
     const bv2mp3Path = resolve(process.cwd(), "node_modules/bv2mp3/src/index.js");
-    execSync(`cd ${biliDir} && ${nodeBin} ${bv2mp3Path} ${urlArgs}`, {
+    execSync(`cd "${biliDir}" && "${nodeBin}" "${bv2mp3Path}" ${urlArgs}`, {
       stdio: "pipe",
       timeout: 300_000,
       maxBuffer: 10 * 1024 * 1024,
@@ -337,6 +339,70 @@ async function executeTool(baseUrl: string, name: string, args: any): Promise<st
 }
 
 // ============================================================
+// 降级搜索 — 大模型调用失败时，直接用输入关键词搜索音乐
+// ============================================================
+async function runDegradedSearch(
+  send: (event: string, data: unknown) => void,
+  sessionId: string,
+  baseUrl: string,
+  mode: string,
+  rawKeyword: string
+): Promise<void> {
+  // 降级直转：消息里带 B站 BV 号（"添加"排队的转换命令或用户直接粘贴的链接）时，
+  // 不经大模型，直接下载转换，并输出 ```added 块让前端自动加入播放列表。
+  const bvids = [...new Set(String(rawKeyword || "").match(/BV[0-9A-Za-z]{8,12}/g) ?? [])];
+  if (bvids.length > 0) {
+    send("output", sseEvent(sessionId, {
+      type: "tool_call",
+      name: "convert_bilibili_videos",
+      arguments: JSON.stringify({ bvids }),
+      input: { bvids },
+    }));
+    try {
+      const res = await convertBilibiliVideos(baseUrl, bvids);
+      send("output", sseEvent(sessionId, { type: "result", subtype: "success", result: res }));
+      send("output", sseEvent(sessionId, {
+        type: "assistant",
+        message: { content: [{ type: "text", text: "```added\n" + res + "\n```" }] },
+      }));
+    } catch (e) {
+      console.error(`[Chat] 降级转换失败:`, e);
+      const msg = e instanceof Error ? e.message : String(e);
+      send("output", sseEvent(sessionId, { type: "result", subtype: "error", result: `降级转换失败: ${msg.slice(0, 200)}` }));
+    }
+    return;
+  }
+
+  const q = String(rawKeyword || "").trim().replace(/^["'“”‘’《》【】\s]+|["'“”‘’《》【】\s]+$/g, "").trim();
+  if (!q) {
+    send("output", sseEvent(sessionId, {
+      type: "assistant",
+      message: { content: [{ type: "text", text: "AI 服务不可用，且未能提取到搜索关键词，请重试。" }] },
+    }));
+    return;
+  }
+  try {
+    if (mode === "cloud") {
+      send("output", sseEvent(sessionId, {
+        type: "tool_call", name: "search_bilibili", arguments: JSON.stringify({ keyword: q }), input: { keyword: q },
+      }));
+      const res = await searchBilibili(baseUrl, q);
+      send("output", sseEvent(sessionId, { type: "result", subtype: "success", result: res }));
+    } else {
+      send("output", sseEvent(sessionId, {
+        type: "tool_call", name: "search_tracks", arguments: JSON.stringify({ q, limit: 20 }), input: { q, limit: 20 },
+      }));
+      const res = await searchTracks(baseUrl, q, 20);
+      send("output", sseEvent(sessionId, { type: "result", subtype: "success", result: res }));
+    }
+  } catch (e) {
+    console.error(`[Chat] 降级搜索失败:`, e);
+    const msg = e instanceof Error ? e.message : String(e);
+    send("output", sseEvent(sessionId, { type: "result", subtype: "error", result: `降级搜索失败: ${msg.slice(0, 200)}` }));
+  }
+}
+
+// ============================================================
 // SSE Event Helpers
 // ============================================================
 function sseEvent(sessionId: string, data: Record<string, unknown>) {
@@ -357,7 +423,7 @@ export async function POST(req: NextRequest) {
   // 检查 API Key 是否已配置
   const apiKey = getConfigVar("ANTHROPIC_API_KEY", "");
   const baseURL = getConfigVar("ANTHROPIC_BASE_URL", "https://apihub.agnes-ai.com/v1");
-  console.log(`[Chat] 配置: model=${MODEL} | baseURL=${baseURL} | apiKey=${apiKey ? "✓ " + apiKey.slice(0, 8) + "..." : "✗ 未配置"}`);
+  console.log(`[Chat] 配置: model=${getModel()} | baseURL=${baseURL} | apiKey=${apiKey ? "✓ " + apiKey.slice(0, 8) + "..." : "✗ 未配置"}`);
   if (!apiKey) {
     const stream = new ReadableStream({
       start(controller) {
@@ -416,9 +482,13 @@ export async function POST(req: NextRequest) {
       const baseUrl = getBaseUrl(req);
 
       const send = (event: string, data: unknown) => {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-        );
+        try {
+          controller.enqueue(
+            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+          );
+        } catch {
+          // 流已关闭（如客户端断开/取消），忽略，避免 ERR_INVALID_STATE
+        }
       };
 
       try {
@@ -458,13 +528,22 @@ export async function POST(req: NextRequest) {
           console.log(`[Chat]   ↳ turn ${turn + 1}: 发起 AI 调用 | conv≈${(convTokenEst / 1024).toFixed(1)}KB | 已过 ${Date.now() - startTime}ms`);
           send("status", { stage: "ai_thinking", detail: `AI 思考中 (第${turn + 1}轮)...` });
 
-          const response = await getClient().chat.completions.create({
-            model: MODEL,
-            messages: conv,
-            tools: availableTools.length > 0 ? availableTools : undefined,
-            stream: true,
-            temperature: 0.7,
-          });
+          let aiResponse;
+          try {
+            aiResponse = await getClient().chat.completions.create({
+              model: getModel(),
+              messages: conv,
+              tools: availableTools.length > 0 ? availableTools : undefined,
+              stream: true,
+              temperature: 0.7,
+            });
+          } catch (aiErr) {
+            console.error(`[Chat] AI 调用失败，降级为关键词搜索:`, aiErr instanceof Error ? aiErr.message : aiErr);
+            send("status", { stage: "degraded", detail: "AI 服务不可用，已降级为关键词直接搜索..." });
+            await runDegradedSearch(send, sessionId, baseUrl, mode, message);
+            send("done", { status: "completed" });
+            return;
+          }
 
           let firstChunkTime = 0;
           let assistantText = "";
@@ -473,7 +552,7 @@ export async function POST(req: NextRequest) {
             { id: string; name: string; arguments: string }
           > = {};
 
-          for await (const chunk of response) {
+          for await (const chunk of aiResponse) {
             if (!firstChunkTime) {
               firstChunkTime = Date.now();
               console.log(`[Chat]     ↳ 收到首块 AI 响应 | 耗时 ${firstChunkTime - turnStart}ms`);
@@ -613,7 +692,11 @@ export async function POST(req: NextRequest) {
         console.error(`[Chat] <<< 错误 ${Date.now() - startTime}ms:`, err);
         send("error", { error: String(err) });
       } finally {
-        controller.close();
+        try {
+          controller.close();
+        } catch {
+          // 已关闭则忽略
+        }
       }
     },
   });

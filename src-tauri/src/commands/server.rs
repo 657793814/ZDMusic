@@ -1,6 +1,9 @@
 use std::net::TcpStream;
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
 use crate::commands::config;
@@ -27,12 +30,15 @@ impl ServerProcess {
 /// Managed state: thread-safe wrapper around the optional child process.
 pub struct ServerState {
     pub inner: Mutex<ServerProcess>,
+    /// Ensures only one watchdog thread is active at a time.
+    pub watchdog_active: AtomicBool,
 }
 
 impl ServerState {
     pub fn new() -> Self {
         Self {
             inner: Mutex::new(ServerProcess::new()),
+            watchdog_active: AtomicBool::new(false),
         }
     }
 }
@@ -136,6 +142,47 @@ fn find_node() -> Option<std::path::PathBuf> {
     None
 }
 
+/// Check whether a TCP port on 127.0.0.1 is currently in use.
+fn is_port_in_use(port: u16) -> bool {
+    use std::net::TcpListener;
+    match format!("127.0.0.1:{}", port).parse::<std::net::SocketAddr>() {
+        Ok(sa) => TcpListener::bind(sa).is_err(),
+        Err(_) => false,
+    }
+}
+
+/// Kill the process listening on the given TCP port (macOS: lsof + kill).
+/// Used to clear stale/orphan server processes before starting a new one,
+/// otherwise the new server fails with EADDRINUSE and the old buggy
+/// process keeps serving.
+fn kill_port_owner(port: u16) {
+    let pid = Command::new("lsof")
+        .args(["-tiTCP", &port.to_string(), "-sTCP:LISTEN"])
+        .output();
+    if let Ok(out) = pid {
+        if out.status.success() {
+            let ids = String::from_utf8_lossy(&out.stdout);
+            for line in ids.lines() {
+                let p = line.trim();
+                if !p.is_empty() {
+                    let _ = Command::new("kill").arg(p).status();
+                }
+            }
+        }
+    }
+}
+
+/// Ensure the port is free before starting the server: kill any process
+/// currently holding it (orphans from a crashed/killed app instance).
+fn clear_port_if_occupied(port: u16) {
+    if is_port_in_use(port) {
+        log::warn!("Port {} is occupied, killing the process holding it", port);
+        kill_port_owner(port);
+        // Give the OS a moment to release the socket
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+}
+
 /// Build the `Command` for starting the Next.js server with env var overrides.
 fn build_server_command(resource_dir: &std::path::Path, port: u16) -> Result<Command, String> {
     let cwd = resource_dir.join("standalone");
@@ -174,9 +221,22 @@ fn build_server_command(resource_dir: &std::path::Path, port: u16) -> Result<Com
         .current_dir(&cwd)
         .env("PORT", port.to_string())
         .env("NODE_ENV", "production")
-        .env("PATH", &final_path)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .env("PATH", &final_path);
+
+    // Redirect the server's stdout/stderr to log files instead of piping:
+    // - piped output is never drained by the parent, so the pipe fills up and
+    //   the server can stall once it exceeds the pipe buffer
+    // - a log file preserves crash/error output for diagnosis
+    let log_dir = config::config_path()
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| std::env::temp_dir());
+    std::fs::create_dir_all(&log_dir).map_err(|e| format!("Cannot create log dir {log_dir:?}: {e}"))?;
+    let stdout = std::fs::File::create(log_dir.join("server.out.log"))
+        .map_err(|e| format!("Cannot open server.out.log: {e}"))?;
+    let stderr = std::fs::File::create(log_dir.join("server.err.log"))
+        .map_err(|e| format!("Cannot open server.err.log: {e}"))?;
+    cmd.stdout(Stdio::from(stdout)).stderr(Stdio::from(stderr));
 
     // Inject MUSIC_DIR from config
     let app_config = config::load_config();
@@ -198,6 +258,56 @@ fn spawn_server(cmd: &mut Command) -> Result<Child, String> {
     cmd.spawn().map_err(|e| format!("Failed to start server: {}", e))
 }
 
+/// Watchdog: if the server process exits unexpectedly, restart it so the
+/// webview (which talks to localhost:PORT) keeps working instead of showing
+/// "Load failed". At most one watchdog runs at a time.
+fn spawn_watchdog(app_handle: AppHandle, port: u16) {
+    let state = app_handle.state::<ServerState>();
+    if state.watchdog_active.swap(true, Ordering::SeqCst) {
+        return; // another watchdog is already running
+    }
+    drop(state);
+
+    thread::spawn(move || {
+        // Give the freshly-started server time to boot before monitoring.
+        thread::sleep(Duration::from_secs(8));
+        loop {
+            thread::sleep(Duration::from_secs(3));
+            let Some(state) = app_handle.try_state::<ServerState>() else {
+                return;
+            };
+            let exited = {
+                let Ok(mut server) = state.inner.lock() else {
+                    continue;
+                };
+                match server.child.as_mut() {
+                    Some(child) => match child.try_wait() {
+                        Ok(Some(_)) => true, // exited
+                        Ok(None) => false,   // still running
+                        Err(_) => true,
+                    },
+                    None => false, // no tracked child; nothing to watch
+                }
+            };
+            if exited {
+                log::warn!(
+                    "Server process exited unexpectedly; restarting on port {}",
+                    port
+                );
+                if let Err(e) = start_server_sync(&app_handle, port) {
+                    log::error!("Failed to restart server: {}", e);
+                    state.watchdog_active.store(false, Ordering::SeqCst);
+                    return;
+                }
+            } else if state.inner.lock().map(|s| s.child.is_none()).unwrap_or(true) {
+                // Server was intentionally stopped (child taken by kill()).
+                state.watchdog_active.store(false, Ordering::SeqCst);
+                return;
+            }
+        }
+    });
+}
+
 /// Start the Next.js production server from the bundled standalone directory.
 #[tauri::command]
 pub async fn start_server(app_handle: AppHandle, port: Option<u16>) -> Result<(), String> {
@@ -206,6 +316,9 @@ pub async fn start_server(app_handle: AppHandle, port: Option<u16>) -> Result<()
     let mut server = state.inner.lock().map_err(|e| e.to_string())?;
 
     server.kill();
+
+    // Kill any stale/orphan process still holding the port.
+    clear_port_if_occupied(port);
 
     let resource_dir = app_handle
         .path()
@@ -217,6 +330,8 @@ pub async fn start_server(app_handle: AppHandle, port: Option<u16>) -> Result<()
 
     log::info!("Server started (PID: {})", child.id());
     server.child = Some(child);
+    drop(server);
+    spawn_watchdog(app_handle.clone(), port);
     Ok(())
 }
 
@@ -246,6 +361,10 @@ pub fn start_server_sync(app_handle: &AppHandle, port: u16) -> Result<(), String
     let mut server = state.inner.lock().map_err(|e| e.to_string())?;
     server.kill();
 
+    // Kill any stale/orphan process still holding the port (e.g. from a
+    // previously crashed app instance), so the new server can bind.
+    clear_port_if_occupied(port);
+
     let resource_dir = app_handle
         .path()
         .resource_dir()
@@ -256,6 +375,8 @@ pub fn start_server_sync(app_handle: &AppHandle, port: u16) -> Result<(), String
 
     log::info!("Server started (PID: {})", child.id());
     server.child = Some(child);
+    drop(server);
+    spawn_watchdog(app_handle.clone(), port);
     Ok(())
 }
 

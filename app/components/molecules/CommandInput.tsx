@@ -102,7 +102,7 @@ export function CommandInput({
             ref={measureRef}
             className="pointer-events-none absolute top-0 left-0 whitespace-pre text-sm"
             aria-hidden
-            style={{ letterSpacing: "0.045em" }}
+            style={{ letterSpacing: "0.045em", color: "transparent" }}
           />
           <span
             aria-hidden
