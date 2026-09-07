@@ -85,17 +85,32 @@ if [ "$SKIP_DMG" = false ]; then
   DMG_PATH="$DMG_DIR/$PROJECT.dmg"
   rm -f "$DMG_PATH"
 
+  # 创建临时目录用于构建 DMG 内容
+  DMG_TEMP=$(mktemp -d)
+  trap "rm -rf '$DMG_TEMP'" EXIT
+
+  # 复制 .app 到临时目录
+  cp -R "$APP_PATH" "$DMG_TEMP/"
+
+  # 创建 Applications 快捷方式
+  ln -s /Applications "$DMG_TEMP/Applications"
+
   # 按 .app 大小 + 50% 余量预分配，防止 hdiutil 空间不足
-  DMG_MB=$((APP_MB + APP_MB / 2 + 50))
+  DMG_MB=$((APP_MB + APP_MB / 2 + 100))
   echo "   .app: ${APP_MB}MB → DMG 预分配: ${DMG_MB}MB"
 
+  # 创建 DMG
   hdiutil create \
     -volname "$PROJECT" \
-    -srcfolder "$APP_PATH" \
+    -srcfolder "$DMG_TEMP" \
     -ov \
     -format UDZO \
     -size "${DMG_MB}m" \
     "$DMG_PATH"
+
+  # 清理临时目录
+  rm -rf "$DMG_TEMP"
+  trap - EXIT
 
   echo ""
   echo "✅ .dmg 生成完成"

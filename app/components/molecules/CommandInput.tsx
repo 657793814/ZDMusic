@@ -18,6 +18,7 @@ export function CommandInput({
   const { t } = useI18n();
   const [value, setValue] = useState("");
   const [cursorLeft, setCursorLeft] = useState(0);
+  const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
   const valueRef = useRef(value);
@@ -88,6 +89,8 @@ export function CommandInput({
             onKeyUp={syncCursor}
             onSelect={syncCursor}
             onClick={syncCursor}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             autoCapitalize="off"
             autoCorrect="off"
             spellCheck={false}
@@ -114,8 +117,8 @@ export function CommandInput({
               borderRadius: "2px",
               left: `${cursorLeft}px`,
               top: "4px",
-              display: disabled ? "none" : "block",
-              animation: disabled ? "none" : "blink 1.05s steps(1, end) infinite",
+              display: disabled || !focused ? "none" : "block",
+              animation: disabled || !focused ? "none" : "blink 1.05s steps(1, end) infinite",
             }}
           />
         </div>
