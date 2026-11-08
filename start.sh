@@ -116,9 +116,9 @@ start_server() {
     sleep 3
     
     # 检查服务器是否成功启动
-    if curl -s http://localhost:3000 > /dev/null; then
+    if curl -s http://localhost:3978 > /dev/null; then
         info "ZDMusic 服务器已成功启动！"
-        info "访问地址: http://localhost:3000"
+        info "访问地址: http://localhost:3978"
         info "日志文件: $LOG_FILE"
         info "进程ID: $(cat "$PID_FILE")"
     else

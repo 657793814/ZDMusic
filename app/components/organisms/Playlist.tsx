@@ -79,7 +79,7 @@ export function Playlist() {
   }, [load]);
 
   useEffect(() => {
-    if (!localTracks && state.playlist.length > 0) {
+    if (state.playlist.length > (localTracks?.length ?? 0)) {
       setLocalTracks(state.playlist);
     }
   }, [localTracks, state.playlist]);

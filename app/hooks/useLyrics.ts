@@ -17,13 +17,19 @@ interface LyricsData {
   notFound?: boolean;
   loading: boolean;
   error?: string;
+  source?: "local" | "embedded" | "lrclib" | "custom" | "none";
 }
 
 // LRU cache per track id
 const lyricsCache = new Map<string, LyricsData>();
 const CACHE_MAX = 50;
 
-export function useLyrics(track: Track | null) {
+/** 自定义歌词写入 / 清除后调用，让下一次读取绕过缓存 */
+export function invalidateLyrics(trackId: string): void {
+  lyricsCache.delete(trackId);
+}
+
+export function useLyrics(track: Track | null, reloadToken = 0) {
   const [data, setData] = useState<LyricsData>({
     synced: [],
     plain: null,
@@ -67,6 +73,7 @@ export function useLyrics(track: Track | null) {
         notFound: json.notFound ?? false,
         loading: false,
         error: json.error,
+        source: json.source,
       };
 
       // Cache it
@@ -157,7 +164,7 @@ export function useLyrics(track: Track | null) {
     }
 
     fetchLyrics(cleanTitle, cleanArtist, track.id);
-  }, [track?.id, track?.title, fetchLyrics]);
+  }, [track?.id, track?.title, fetchLyrics, reloadToken]);
 
   return data;
 }

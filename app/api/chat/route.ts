@@ -41,15 +41,6 @@ const BASE_PROMPT = `你是 ZDMusic 的 AI 音频助手。保持简洁的中文�
 - 所有搜索和操作必须通过可用的函数工具完成
 - **严禁**安装任何外部工具或依赖，遇到工具缺失或命令失败时，如实告知用户并停止操作，等待用户指示`;
 
-const LOCAL_PROMPT = `${BASE_PROMPT}
-
-## 本地曲库搜索
-
-使用 search_tracks(q, limit=20)。API 对 title/author/filename 做模糊匹配，直接返回 JSON。
-- 结果 total>0 即命中，直接推荐
-- 简繁体差异先判断再决定是否搜两次，合并去重后返回
-- 输出用 \`\`\`tracks 代码块，字段必须原样复制 id/title/author/url，禁止修改`;
-
 const CLOUD_PROMPT = `${BASE_PROMPT}
 
 ## B站云端搜索
@@ -62,33 +53,6 @@ const CLOUD_PROMPT = `${BASE_PROMPT}
 // ============================================================
 // Tool Definitions
 // ============================================================
-const LOCAL_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
-  {
-    type: "function",
-    function: {
-      name: "search_tracks",
-      description: "搜索本地曲库中的音乐文件，支持按标题/作者/文件名模糊匹配",
-      parameters: {
-        type: "object",
-        properties: {
-          q: {
-            type: "string",
-            description:
-              "搜索关键词，对 title、author、filename 做模糊匹配。传空字符串可获取全部曲库",
-          },
-          limit: {
-            type: "integer",
-            description: "返回结果数量上限，默认20",
-          },
-        },
-        required: ["q"],
-        additionalProperties: false,
-      },
-      strict: true,
-    },
-  },
-];
-
 const CLOUD_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
@@ -142,18 +106,9 @@ const CLOUD_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 // ============================================================
 /** 从 NextRequest 提取当前服务 base URL */
 function getBaseUrl(req: NextRequest): string {
-  const host = req.headers.get("host") || "localhost:3000";
+  const host = req.headers.get("host") || "localhost:3978";
   const protocol = req.nextUrl.protocol; // "http:" or "https:"
   return `${protocol}//${host}`;
-}
-
-async function searchTracks(baseUrl: string, q: string, limit?: number): Promise<string> {
-  const params = new URLSearchParams();
-  params.set("q", q);
-  if (limit) params.set("limit", String(limit));
-  const res = await fetch(`${baseUrl}/api/search?${params}`);
-  const data = await res.json();
-  return JSON.stringify(data);
 }
 
 async function searchBilibili(baseUrl: string, keyword: string): Promise<string> {
@@ -327,8 +282,6 @@ async function convertBilibiliVideos(baseUrl: string, bvids: string[], titles?: 
 
 async function executeTool(baseUrl: string, name: string, args: any): Promise<string> {
   switch (name) {
-    case "search_tracks":
-      return searchTracks(baseUrl, args.q, args.limit);
     case "search_bilibili":
       return searchBilibili(baseUrl, args.keyword);
     case "convert_bilibili_videos":
@@ -345,7 +298,6 @@ async function runDegradedSearch(
   send: (event: string, data: unknown) => void,
   sessionId: string,
   baseUrl: string,
-  mode: string,
   rawKeyword: string
 ): Promise<void> {
   // 降级直转：消息里带 B站 BV 号（"添加"排队的转换命令或用户直接粘贴的链接）时，
@@ -382,19 +334,11 @@ async function runDegradedSearch(
     return;
   }
   try {
-    if (mode === "cloud") {
-      send("output", sseEvent(sessionId, {
-        type: "tool_call", name: "search_bilibili", arguments: JSON.stringify({ keyword: q }), input: { keyword: q },
-      }));
-      const res = await searchBilibili(baseUrl, q);
-      send("output", sseEvent(sessionId, { type: "result", subtype: "success", result: res }));
-    } else {
-      send("output", sseEvent(sessionId, {
-        type: "tool_call", name: "search_tracks", arguments: JSON.stringify({ q, limit: 20 }), input: { q, limit: 20 },
-      }));
-      const res = await searchTracks(baseUrl, q, 20);
-      send("output", sseEvent(sessionId, { type: "result", subtype: "success", result: res }));
-    }
+    send("output", sseEvent(sessionId, {
+      type: "tool_call", name: "search_bilibili", arguments: JSON.stringify({ keyword: q }), input: { keyword: q },
+    }));
+    const res = await searchBilibili(baseUrl, q);
+    send("output", sseEvent(sessionId, { type: "result", subtype: "success", result: res }));
   } catch (e) {
     console.error(`[Chat] 降级搜索失败:`, e);
     const msg = e instanceof Error ? e.message : String(e);
@@ -413,12 +357,12 @@ function sseEvent(sessionId: string, data: Record<string, unknown>) {
 // Route Handler
 // ============================================================
 export async function POST(req: NextRequest) {
-  const { message, mode, history } = await req.json();
+  const { message, history, context } = await req.json();
 
   const startTime = Date.now();
   const msgPreview = (message || "").slice(0, 60);
   const historyCount = Array.isArray(history) ? history.length : 0;
-  console.log(`[Chat] >>> 收到请求 | mode=${mode} | msg="${msgPreview}" | history=${historyCount}条`);
+  console.log(`[Chat] >>> 收到请求 | msg="${msgPreview}" | history=${historyCount}条`);
 
   // 检查 API Key 是否已配置
   const apiKey = getConfigVar("ANTHROPIC_API_KEY", "");
@@ -454,7 +398,21 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "message is required" }, { status: 400 });
   }
 
-  const systemPrompt = mode === "cloud" ? CLOUD_PROMPT : LOCAL_PROMPT;
+  const basePrompt = CLOUD_PROMPT;
+
+  // 播放内核上下文：让助手知道现在在听什么、队列里有什么、曲库规模
+  let playerContext = "";
+  if (context && typeof context === "object") {
+    try {
+      playerContext =
+        "\n\n## 当前播放上下文（前端实时上报，回答时可直接引用）\n" +
+        JSON.stringify(context, null, 2);
+    } catch {
+      playerContext = "";
+    }
+  }
+
+  const systemPrompt = basePrompt + playerContext;
 
   // Build conversation history context for the prompt
   let historyContext = "";
@@ -496,7 +454,7 @@ export async function POST(req: NextRequest) {
 
         console.log(`[Chat] AI 流程开始 | 已过 ${Date.now() - startTime}ms`);
 
-        const availableTools = mode === "cloud" ? CLOUD_TOOLS : LOCAL_TOOLS;
+        const availableTools = CLOUD_TOOLS;
         const sessionId =
           typeof crypto !== "undefined" && crypto.randomUUID
             ? crypto.randomUUID()
@@ -540,7 +498,7 @@ export async function POST(req: NextRequest) {
           } catch (aiErr) {
             console.error(`[Chat] AI 调用失败，降级为关键词搜索:`, aiErr instanceof Error ? aiErr.message : aiErr);
             send("status", { stage: "degraded", detail: "AI 服务不可用，已降级为关键词直接搜索..." });
-            await runDegradedSearch(send, sessionId, baseUrl, mode, message);
+            await runDegradedSearch(send, sessionId, baseUrl, message);
             send("done", { status: "completed" });
             return;
           }

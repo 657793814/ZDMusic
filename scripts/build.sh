@@ -40,6 +40,11 @@ if [ -d "src-tauri/target/debug" ]; then
   rm -rf "src-tauri/target/debug"
 fi
 
+# 清理 Next.js 构建缓存：dev 与 build 共用 .next，混用会加载旧 bundle
+# （表现为起 dev 后新组件/新按钮不出现；清掉即可恢复）
+echo "   🗑️ 清理 .next（避免 dev/build 产物混用）..."
+rm -rf .next
+
 # 清理 Tauri 临时文件
 find "src-tauri/target" -name ".tmp_*" -delete 2>/dev/null || true
 

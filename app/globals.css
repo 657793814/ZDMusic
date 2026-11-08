@@ -1,68 +1,44 @@
 @import "tailwindcss";
-
-/* ─── Design tokens (Modern Dark) ─── */
-:root {
-  /* Surface & containers */
-  --color-surface: #0a0a0b;
-  --color-on-surface: #e8e6e7;
-  --color-surface-dim: #141416;
-  --color-surface-raised: #1c1c1f;
-  --color-surface-overlay: #252529;
-  --color-outline: #6e6e72;
-  --color-outline-dim: #2a2a2e;
-
-  /* Brand */
-  --color-primary: #a78bfa;
-  --color-primary-dim: #8b6cf0;
-  --color-secondary: #2dd4bf;
-  --color-on-primary: #0a0a0b;
-
-  /* Semantic */
-  --color-error: #f87171;
-  --color-on-error: #0a0a0b;
-  --color-success: #4ade80;
-
-  /* Motion */
-  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-  --dur-short: 200ms;
-  --dur-medium: 350ms;
-  --dur-long: 500ms;
-
-  /* Layout rhythm */
-  --radius-card: 16px;
-  --radius-element: 12px;
-  --radius-full: 9999px;
-
-  /* Typography */
-  --font-body: var(--font-inter, "Inter", ui-sans-serif, system-ui, sans-serif);
-  --tracking-label: 0.02em;
-}
+@import "./styles/tokens.css";
+@import "./styles/glass.css";
+@import "./styles/shell.css";
+@import "./styles/home.css";
+@import "./styles/stage.css";
+@import "./styles/overlay.css";
 
 @theme inline {
-  /* Typography → font-sans / font-display utilities */
-  --font-body: var(--font-inter, "Inter", ui-sans-serif, system-ui, sans-serif);
-  --font-sans: var(--font-body);
+  /* Typography → font-sans / font-mono utilities */
+  --font-body: var(--zd-font-body);
+  --font-sans: var(--zd-font-body);
+  --font-mono: var(--zd-font-mono);
 
-  /* Colors → Tailwind utilities (bg-*, text-*, border-*, ring-*) */
-  --color-surface: #0a0a0b;
-  --color-on-surface: #e8e6e7;
-  --color-surface-dim: #141416;
-  --color-surface-raised: #1c1c1f;
-  --color-surface-overlay: #252529;
-  --color-outline: #6e6e72;
-  --color-outline-dim: #2a2a2e;
-  --color-primary: #a78bfa;
-  --color-primary-dim: #8b6cf0;
-  --color-secondary: #2dd4bf;
-  --color-on-primary: #0a0a0b;
-  --color-error: #f87171;
-  --color-on-error: #0a0a0b;
+  /* Colors → Tailwind utilities（映射到新令牌，旧类名继续可用） */
+  --color-surface: var(--zd-bg);
+  --color-on-surface: var(--zd-ink);
+  --color-surface-dim: var(--zd-paper);
+  --color-surface-raised: #13161b;
+  --color-surface-overlay: #1c2026;
+  --color-outline: var(--zd-muted);
+  --color-outline-dim: var(--zd-hair-2);
+  --color-primary: var(--zd-accent);
+  --color-primary-dim: #e6e9ec;
+  --color-secondary: var(--zd-accent-home);
+  --color-on-primary: var(--zd-bg);
+  --color-error: var(--zd-danger);
+  --color-on-error: var(--zd-bg);
   --color-success: #4ade80;
+  --color-hair: var(--zd-hair);
+  --color-ink: var(--zd-ink);
+  --color-muted: var(--zd-muted);
+
+  /* Radius */
+  --radius-card: var(--zd-radius-drawer);
+  --radius-element: var(--zd-radius-cover);
+  --radius-pill: var(--zd-radius-pill);
 
   /* Animations */
-  --animate-fade-in: fade-in var(--dur-medium) var(--ease-standard);
-  --animate-slide-up: slide-up var(--dur-medium) var(--ease-emphasized);
+  --animate-fade-in: fade-in var(--zd-dur-2) var(--zd-ease);
+  --animate-slide-up: slide-up var(--zd-dur-2) var(--zd-ease);
   --animate-bar-bounce: bar-bounce 1.2s ease-in-out infinite;
 }
 
@@ -115,18 +91,19 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--zd-bg);
 }
 
 body {
   margin: 0;
   height: 100dvh;
   overflow: hidden;
-  background-color: var(--color-surface);
-  color: var(--color-on-surface);
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 24px;
-  letter-spacing: 0.01em;
+  background-color: var(--zd-bg);
+  color: var(--zd-ink);
+  font-family: var(--zd-font-body);
+  font-size: 14px;
+  line-height: 22px;
+  letter-spacing: var(--zd-tracking-label);
 }
 
 h1,
@@ -135,19 +112,19 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-body);
+  font-family: var(--zd-font-body);
   font-weight: 600;
-  letter-spacing: var(--tracking-label);
+  letter-spacing: var(--zd-tracking-label);
 }
 
 label {
-  font-family: var(--font-body);
-  letter-spacing: var(--tracking-label);
+  font-family: var(--zd-font-body);
+  letter-spacing: var(--zd-tracking-label);
   font-size: 0.75rem;
   font-weight: 500;
 }
 
-/* ─── Utilities ─── */
+/* ─── Utilities（旧组件使用，保留） ─── */
 
 /* Clock panel gradient overlay */
 .scanline-gradient::after {
@@ -160,11 +137,11 @@ label {
     to bottom,
     transparent 0,
     transparent 2px,
-    color-mix(in srgb, var(--color-on-surface) 3%, transparent) 2px,
-    color-mix(in srgb, var(--color-on-surface) 3%, transparent) 3px
+    color-mix(in srgb, var(--zd-ink) 3%, transparent) 2px,
+    color-mix(in srgb, var(--zd-ink) 3%, transparent) 3px
   );
   mix-blend-mode: soft-light;
-  animation: scanline-gradient var(--dur-scanline) linear infinite;
+  animation: scanline-gradient var(--dur-scanline, 8s) linear infinite;
 }
 
 @keyframes scanline-gradient {
@@ -183,17 +160,17 @@ label {
 
 /* Card shadow */
 .card-shadow {
-  border-radius: var(--radius-card);
-  background: var(--color-surface-raised);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  border-radius: var(--zd-radius-drawer);
+  background: var(--zd-paper);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .card-shadow-hover {
-  transition: box-shadow var(--dur-short) var(--ease-standard);
+  transition: box-shadow var(--zd-dur-1) var(--zd-ease);
 }
 
 .card-shadow-hover:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Modern progress track */
@@ -201,23 +178,23 @@ label {
   position: relative;
   height: 4px;
   width: 100%;
-  border-radius: var(--radius-full);
-  background-color: var(--color-surface-overlay);
+  border-radius: var(--zd-radius-pill);
+  background-color: var(--zd-hair);
 }
 
 .modern-progress-fill {
   height: 100%;
   width: var(--progress-pct, 0%);
   max-width: 100%;
-  background: linear-gradient(90deg, var(--color-primary-dim), var(--color-primary));
-  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--zd-ink-2), var(--zd-accent));
+  border-radius: var(--zd-radius-pill);
   transition: width 0.1s linear;
 }
 
 /* Modern scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-outline-dim) var(--color-surface-dim);
+  scrollbar-color: var(--zd-hair-2) var(--zd-paper);
 }
 
 *::-webkit-scrollbar {
@@ -226,24 +203,24 @@ label {
 }
 
 *::-webkit-scrollbar-track {
-  background: var(--color-surface-dim);
+  background: var(--zd-paper);
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--color-outline-dim);
+  background: var(--zd-hair-2);
   border-radius: 4px;
-  border: 2px solid var(--color-surface-dim);
+  border: 2px solid var(--zd-paper);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--color-outline);
+  background: var(--zd-muted);
 }
 
-/* ─── 翻转退出浮层 ─── */
+/* ─── 翻转退出浮层（旧组件保留） ─── */
 .flip-exit-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: var(--zd-z-overlay);
   pointer-events: none;
   perspective: 1200px;
 }
@@ -253,23 +230,23 @@ label {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 51;
+  z-index: calc(var(--zd-z-overlay) + 1);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
   padding: 10px 16px;
   pointer-events: auto;
-  background: linear-gradient(180deg, rgba(10,10,11,0.85) 0%, rgba(10,10,11,0) 100%);
+  background: linear-gradient(180deg, rgba(8, 9, 11, 0.85) 0%, rgba(8, 9, 11, 0) 100%);
   animation: fade-in 0.3s ease;
 }
 
 .flip-exit-bar span {
-  font-family: var(--font-body);
+  font-family: var(--zd-font-body);
   font-size: 12px;
   letter-spacing: 0.1em;
   opacity: 0.65;
-  color: var(--color-on-surface);
+  color: var(--zd-ink);
 }
 
 .flip-exit-btn {
@@ -279,8 +256,8 @@ label {
   width: 28px;
   height: 28px;
   border-radius: 9999px;
-  border: 1px solid var(--color-outline-dim);
-  color: var(--color-outline);
+  border: 1px solid var(--zd-hair-2);
+  color: var(--zd-muted);
   font-size: 14px;
   cursor: pointer;
   background: transparent;
@@ -288,34 +265,18 @@ label {
 }
 
 .flip-exit-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--zd-accent-home);
+  color: var(--zd-accent-home);
 }
 
-/* ─── 🎨 主题系统 ─── */
-
-/* 氛围光变量占位（由 ThemeContext 注入实际值） */
+/* ─── 主题系统（旧组件兼容） ─── */
 :root {
   --theme-gradient: none;
 }
 
-/* 全局过渡动画 — 主题切换时丝滑变化 */
-html {
-  transition: background-color var(--dur-long) var(--ease-emphasized);
-}
-
-*,
-*::before,
-*::after {
-  transition-property: background-color, color, border-color, box-shadow;
-  transition-duration: var(--dur-long);
-  transition-timing-function: var(--ease-standard);
-}
-
-/* 氛围光背景层（页面主容器使用 .ambient-bg 即可） */
 .ambient-bg {
   position: relative;
-  background-color: var(--color-surface);
+  background-color: var(--zd-bg);
 }
 
 .ambient-bg::before {
@@ -325,7 +286,6 @@ html {
   z-index: 0;
   pointer-events: none;
   background: var(--theme-gradient);
-  transition: background var(--dur-long) var(--ease-standard);
 }
 
 .ambient-bg > * {
@@ -333,9 +293,8 @@ html {
   z-index: 1;
 }
 
-/* 主题切换按钮的不缩放例外 — 按钮自身的 hover 不应继承基础过渡 */
 .theme-swatch-btn {
   transition-property: background-color, border-color, box-shadow;
-  transition-duration: var(--dur-short);
-  transition-timing-function: var(--ease-standard);
+  transition-duration: var(--zd-dur-1);
+  transition-timing-function: var(--zd-ease);
 }

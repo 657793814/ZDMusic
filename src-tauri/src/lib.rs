@@ -91,19 +91,19 @@ pub fn run() {
                 let handle = app.handle().clone();
                 thread::spawn(move || {
                     thread::sleep(Duration::from_secs(1));
-                    if let Err(e) = start_server_sync(&handle, 3000) {
+                    if let Err(e) = start_server_sync(&handle, 3978) {
                         log::error!("Failed to start server: {}", e);
                         return;
                     }
                     for i in 0..60 {
-                        if TcpStream::connect("127.0.0.1:3000").is_ok() {
+                        if TcpStream::connect("127.0.0.1:3978").is_ok() {
                             log::info!("Server ready after ~{}s", (i + 1) / 2);
                             break;
                         }
                         thread::sleep(Duration::from_millis(500));
                     }
                     if let Some(window) = handle.get_webview_window("main") {
-                        let _ = window.eval("window.location.href = 'http://localhost:3000'");
+                        let _ = window.eval("window.location.href = 'http://localhost:3978'");
                     }
                 });
             }

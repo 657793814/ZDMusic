@@ -58,8 +58,6 @@ export type DictKey =
   | "sysLabel"
   | "danmaku"
   | "danmakuUnavailable"
-  | "local"
-  | "cloud"
   | "title"
   | "description"
   | "playlists"
@@ -161,8 +159,6 @@ const zh: Record<string, string> = {
   sysLabel: "系统",
   danmaku: "弹幕",
   danmakuUnavailable: "无法找到弹幕源",
-  local: "本地",
-  cloud: "云端",
   title: "卓动悦听",
   description: "在任何时间、任何地点播放音乐。",
 
@@ -275,8 +271,6 @@ const en: Record<string, string> = {
   sysLabel: "System",
   danmaku: "Comments",
   danmakuUnavailable: "No comments source found",
-  local: "Local",
-  cloud: "Cloud",
   title: "卓动悦听",
   description: "Listen to music anytime, anywhere.",
 

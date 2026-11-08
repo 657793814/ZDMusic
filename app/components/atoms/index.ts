@@ -6,7 +6,6 @@ export { FullScreenVisualizer } from "./FullScreenVisualizer";
 export { LyricsDisplay } from "./LyricsDisplay";
 export { GlowDot } from "./GlowDot";
 export { Logo } from "./Logo";
-export { ModeSwitch } from "./ModeSwitch";
 export { Icon } from "./Icon";
 export { Label } from "./Label";
 export { ProgressBar } from "./ProgressBar";

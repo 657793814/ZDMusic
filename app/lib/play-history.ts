@@ -6,6 +6,8 @@ interface PlayRecord {
   trackId: string;
   playedAt: number; // timestamp
   completed: boolean; // played to >80%
+  /** 曲目时长（秒），用于今日聆听时长聚合；旧记录可能没有 */
+  duration?: number;
 }
 
 interface PlayHistory {
@@ -43,9 +45,18 @@ export function writeHistory(history: PlayHistory): boolean {
   } catch { return false; }
 }
 
-export function recordPlay(trackId: string, completed: boolean): void {
+export function recordPlay(
+  trackId: string,
+  completed: boolean,
+  duration?: number
+): void {
   const history = readHistory();
-  history.records.push({ trackId, playedAt: Date.now(), completed });
+  history.records.push({
+    trackId,
+    playedAt: Date.now(),
+    completed,
+    ...(duration && Number.isFinite(duration) && duration > 0 ? { duration } : {}),
+  });
   // Keep last 1000 records
   if (history.records.length > 1000) {
     history.records = history.records.slice(-1000);

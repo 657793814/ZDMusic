@@ -2,7 +2,6 @@
 
 import { Badge } from "@/app/components/atoms/Badge";
 import { GlowDot } from "@/app/components/atoms/GlowDot";
-import { ModeSwitch } from "@/app/components/atoms/ModeSwitch";
 import { Label } from "@/app/components/atoms/Label";
 import { ChatMessage } from "@/app/components/molecules/ChatMessage";
 import { CommandInput } from "@/app/components/molecules/CommandInput";
@@ -43,7 +42,11 @@ const ThinkingCard = (
   </article>
 );
 
-export function AgentChat() {
+export function AgentChat({
+  requestContext,
+}: {
+  requestContext?: Record<string, unknown>;
+} = {}) {
   const { messages, loading, sessionId, sendMessage, cancel, stageMsg } = useAgent();
   const { t } = useI18n();
   const listRef = useRef<HTMLDivElement>(null);
@@ -136,7 +139,6 @@ export function AgentChat() {
           {t("neuralAgent")}
         </Label>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <ModeSwitch />
           {loading ? (
             <Badge label={t("processing")} variant="primary" />
           ) : (
@@ -164,7 +166,15 @@ export function AgentChat() {
       <div className="shrink-0 border-t px-3 py-3 md:px-4" style={{ borderColor: "var(--color-outline-dim)" }}>
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <CommandInput disabled={loading} onSubmit={(txt) => void sendMessage(txt)} />
+            <CommandInput
+              disabled={loading}
+              onSubmit={(txt) =>
+                void sendMessage(
+                  txt,
+                  requestContext ? { context: requestContext } : undefined
+                )
+              }
+            />
           </div>
           {loading && (
             <button

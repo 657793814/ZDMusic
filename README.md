@@ -107,7 +107,11 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-打开 **http://localhost:3000** 即可使用。
+打开 **http://localhost:3978** 即可使用。
+
+> ⚠️ **`dev` 与 `build` 共用 `.next` 目录**：先跑过 `npm run build` 再起 `npm run dev`，Turbopack 会复用生产构建残留（页面看起来正常，但新组件/新按钮不出现）。
+> 症状和修复：起 dev 后看不到刚写的 UI → `npm run dev:clean`（= `rm -rf .next && next dev`）。打包脚本 `scripts/build.sh` 也会在构建前清掉 `.next`，避免两套产物混用。
+
 
 ### 桌面端（Tauri App）
 
@@ -294,7 +298,7 @@ pnpm tauri:build
 brew install chromaprint
 
 # 2. 建立指纹索引（首次运行）
-curl -X POST http://localhost:3000/api/tracks/build-fingerprints
+curl -X POST http://localhost:3978/api/tracks/build-fingerprints
 
 # 3. 点击播放器底部的 🎵 按钮，录音 10-15 秒
 ```

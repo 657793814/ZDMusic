@@ -51,10 +51,15 @@ function saveAudio(audioBuffer: Buffer): { tmpDir: string; inputPath: string; pc
   const inputPath = join(tmpDir, "input.webm");
   const pcmPath = join(tmpDir, "sample.wav");
   writeFileSync(inputPath, audioBuffer);
-  execSync(
-    `ffmpeg -y -i "${inputPath}" -ar 44100 -ac 1 -f wav "${pcmPath}"`,
-    { stdio: "pipe", timeout: 30000 },
-  );
+  try {
+    execSync(
+      `ffmpeg -y -i "${inputPath}" -ar 44100 -ac 1 -f wav "${pcmPath}"`,
+      { stdio: "pipe", timeout: 30000 },
+    );
+  } catch {
+    cleanup(tmpDir, inputPath, pcmPath);
+    throw new Error("录音数据无法解析，请重新录制");
+  }
   return { tmpDir, inputPath, pcmPath };
 }
 

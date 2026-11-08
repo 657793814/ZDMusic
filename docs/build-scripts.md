@@ -49,7 +49,7 @@ cd <项目根目录>
 
 # 方式 1：分别启动
 nvm use 22.22.3
-npm run dev             # 终端1：Next.js 开发服务器 (http://localhost:3000)
+npm run dev             # 终端1：Next.js 开发服务器 (http://localhost:3978)
 npm run tauri dev       # 终端2：Tauri 桌面窗口
 
 # 方式 2：Tauri 自动启动 Next.js dev server

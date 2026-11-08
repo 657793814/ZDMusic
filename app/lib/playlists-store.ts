@@ -21,7 +21,7 @@ const DEFAULT_STORE: PlaylistStore = { playlists: [] };
  *   → config dir = ~/.zdmusic/
  *   → playlists = ~/.zdmusic/playlists.json
  */
-function getConfigDir(): string {
+export function getConfigDir(): string {
   const configFile = process.env.ZD_CONFIG_FILE || "";
   if (configFile && configFile.length > 0) {
     const parent = dirname(configFile);

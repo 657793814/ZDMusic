@@ -16,6 +16,35 @@ export interface TrackTags {
 
 const FFPROBE = "/opt/homebrew/bin/ffprobe";
 
+export type TagSummary = {
+  title: string;
+  artist: string;
+  album: string;
+  duration: number;
+};
+
+/**
+ * 轻量 tag 读取：只跑 ffprobe，不解码封面。
+ * 曲库重扫用它补齐时长/专辑，避免 55 首逐首解封面导致几十秒卡顿。
+ */
+export function readTagSummary(filePath: string): TagSummary | null {
+  try {
+    const cmd = `${FFPROBE} -v quiet -print_format json -show_format ${JSON.stringify(filePath)}`;
+    const out = execSync(cmd, { timeout: 3000, encoding: "utf-8" });
+    const data = JSON.parse(out);
+    const format = data.format?.tags || {};
+    const duration = parseFloat(data.format?.duration || "0");
+    return {
+      title: format.title || "",
+      artist: format.artist || "",
+      album: format.album || "",
+      duration: isNaN(duration) ? 0 : duration,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Read ID3 tags from an MP3 file using ffprobe.
  * Returns null if file doesn't exist or tags can't be read.

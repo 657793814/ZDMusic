@@ -16,6 +16,8 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.8);
   const volumeRef = useRef(0.8);
+  const [rate, setRateState] = useState(1);
+  const rateRef = useRef(1);
 
   const setAudioRef = useCallback((el: HTMLAudioElement | null) => {
     audioRef.current = el;
@@ -48,6 +50,7 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
     el.addEventListener("volumechange", syncVol);
 
     el.volume = volumeRef.current;
+    el.playbackRate = rateRef.current;
     setVolumeState(el.volume);
     syncDuration();
     syncProgress();
@@ -93,11 +96,30 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
     if (audioRef.current) audioRef.current.volume = v;
   }, []);
 
+  const setRate = useCallback((value: number) => {
+    const next = Math.max(0.25, Math.min(4, value));
+    rateRef.current = next;
+    setRateState(next);
+    if (audioRef.current) audioRef.current.playbackRate = next;
+  }, []);
+
+  /** 只装载音源，不自动播放（供播放内核控制 autoplay / 淡入） */
+  const load = useCallback((url: string) => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.src = url;
+    el.load();
+    el.playbackRate = rateRef.current;
+    setProgress(0);
+    setDuration(0);
+  }, []);
+
   const playTrack = useCallback((track: Track) => {
     const el = audioRef.current;
     if (!el) return;
     el.src = track.url;
     el.load();
+    el.playbackRate = rateRef.current;
     setProgress(0);
     setDuration(0);
     setPlaying(true);
@@ -112,11 +134,14 @@ export function useAudioPlayer(options?: { onEnded?: () => void }) {
     progress,
     duration,
     volume,
+    rate,
     play,
     pause,
     toggle,
     seek,
     setVolume,
+    setRate,
+    load,
     playTrack,
   };
 }

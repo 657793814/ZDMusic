@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFileSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { dirname, join } from "path";
 import { readEffectiveConfig } from "@/app/lib/config";
@@ -22,19 +22,32 @@ export async function GET() {
   }
 }
 
+function readExisting(path: string): Record<string, unknown> {
+  try {
+    if (!existsSync(path)) return {};
+    const raw = readFileSync(path, "utf-8");
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function POST(request: NextRequest) {
   const path = getConfigPath();
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
+    // 与旧文件浅合并，避免设置保存时丢掉 theme_id 等未在表单中出现的键
+    const merged = { ...readExisting(path), ...body };
     const dir = dirname(path);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(path, JSON.stringify(body, null, 2), "utf-8");
+    writeFileSync(path, JSON.stringify(merged, null, 2), "utf-8");
 
     // 也同步写入 ~/.zdmusic/config.json，保证两边配置一致
     const fallbackDir = join(homedir(), ".zdmusic");
     mkdirSync(fallbackDir, { recursive: true });
     const fallbackPath = join(fallbackDir, "config.json");
-    writeFileSync(fallbackPath, JSON.stringify(body, null, 2), "utf-8");
+    writeFileSync(fallbackPath, JSON.stringify(merged, null, 2), "utf-8");
 
     return NextResponse.json({ ok: true });
   } catch (e) {

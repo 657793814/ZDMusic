@@ -1,13 +1,6 @@
 import { Providers } from "@/app/components/providers";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  weight: ["300", "400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   title: "卓动悦听",
@@ -29,8 +22,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${inter.variable}`}
-      style={{ backgroundColor: "var(--color-surface)" }}
+      style={{ backgroundColor: "var(--zd-bg)" }}
       suppressHydrationWarning
     >
       <head>
@@ -46,8 +38,8 @@ export default function RootLayout({
       </head>
       <body
         tabIndex={-1}
-        className={`${inter.className} antialiased`}
-        style={{ backgroundColor: "var(--color-surface)", color: "var(--color-on-surface)" }}
+        className="antialiased"
+        style={{ backgroundColor: "var(--zd-bg)", color: "var(--zd-ink)" }}
       >
         <Providers>
           {children}

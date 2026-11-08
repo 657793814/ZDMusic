@@ -311,7 +311,7 @@ fn spawn_watchdog(app_handle: AppHandle, port: u16) {
 /// Start the Next.js production server from the bundled standalone directory.
 #[tauri::command]
 pub async fn start_server(app_handle: AppHandle, port: Option<u16>) -> Result<(), String> {
-    let port = port.unwrap_or(3000);
+    let port = port.unwrap_or(3978);
     let state = app_handle.state::<ServerState>();
     let mut server = state.inner.lock().map_err(|e| e.to_string())?;
 
@@ -348,7 +348,7 @@ pub async fn stop_server(app_handle: AppHandle) -> Result<(), String> {
 /// Check if the Next.js server is alive by attempting a TCP connection.
 #[tauri::command]
 pub async fn is_server_alive(port: Option<u16>) -> Result<bool, String> {
-    let port = port.unwrap_or(3000);
+    let port = port.unwrap_or(3978);
     match TcpStream::connect(format!("127.0.0.1:{}", port)) {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),
@@ -385,7 +385,7 @@ pub fn start_server_sync(app_handle: &AppHandle, port: u16) -> Result<(), String
 pub fn restart_server_with_config(app_handle: &AppHandle) -> Result<(), String> {
     log::info!("Restarting server with updated config...");
     stop_server_sync(app_handle);
-    start_server_sync(app_handle, 3000)?;
+    start_server_sync(app_handle, 3978)?;
     log::info!("Server restarted");
     Ok(())
 }

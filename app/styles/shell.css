@@ -1,0 +1,484 @@
+/* ─── AppShell 三层骨架 ───
+ *   z0 舞台背景 / z4 Home & Stage / z6 底部控制条 / z17+ 浮层
+ */
+
+.zd-app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--zd-bg);
+  color: var(--zd-ink);
+  font-family: var(--zd-font-body);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.zd-stage-bg {
+  position: absolute;
+  inset: 0;
+  z-index: var(--zd-z-stage);
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120% 90% at 50% 0%,
+      color-mix(in srgb, var(--zd-tint) 24%, transparent) 0%,
+      transparent 64%
+    ),
+    var(--zd-bg);
+}
+
+.zd-stage-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    70% 60% at 50% 100%,
+    color-mix(in srgb, var(--zd-tint) 12%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+.zd-view {
+  position: absolute;
+  inset: 0;
+  z-index: var(--zd-z-home);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--zd-space-xl);
+  transition: opacity var(--zd-dur-3) var(--zd-ease);
+}
+
+.zd-view[data-active="false"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Home 空态（旧版兜底，HomeView 已改用 home.css） */
+.zd-kicker {
+  font-size: var(--zd-text-kicker);
+  font-weight: 780;
+  letter-spacing: var(--zd-tracking-kicker);
+  text-transform: uppercase;
+  color: var(--zd-muted);
+}
+
+/* 底部控制条 */
+.zd-dock-wrap {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: var(--zd-z-dock);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition:
+    transform var(--zd-dur-3) var(--zd-ease),
+    opacity var(--zd-dur-3) var(--zd-ease);
+}
+
+.zd-dock-wrap[data-hidden="true"] {
+  transform: translateX(-50%) translateY(calc(100% + 24px)) scale(0.972);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.zd-dock {
+  display: flex;
+  align-items: center;
+  gap: var(--zd-space-md);
+  width: min(1080px, calc(100vw - 56px));
+  padding: 8px 14px;
+  border-radius: var(--zd-radius-pill);
+}
+
+/* 亮背景可读性：底栏内的文字、图标、进度条统一加深对比 */
+.zd-dock .zd-icon-btn {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(238, 246, 255, 0.9);
+  transition:
+    transform var(--zd-dur-1) var(--zd-ease),
+    background-color var(--zd-dur-2) var(--zd-ease),
+    color var(--zd-dur-2) var(--zd-ease),
+    border-color var(--zd-dur-2) var(--zd-ease),
+    box-shadow var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-dock .zd-icon-btn:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.17);
+  color: #ffffff;
+}
+
+.zd-dock .zd-icon-btn[data-active="true"] {
+  border-color: color-mix(in srgb, var(--zd-accent-home) 62%, transparent);
+  background: color-mix(in srgb, var(--zd-accent-home) 20%, rgba(0, 0, 0, 0.28));
+  color: var(--zd-accent-home);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--zd-accent-home) 32%, transparent),
+    0 6px 18px color-mix(in srgb, var(--zd-accent-home) 22%, transparent);
+}
+
+.zd-dock .zd-dock-play {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.07));
+  color: #ffffff;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.zd-dock .zd-dock-play[data-active="true"] {
+  border-color: transparent;
+  background: var(--zd-accent-home);
+  color: #04110f;
+  box-shadow:
+    0 6px 20px color-mix(in srgb, var(--zd-accent-home) 38%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.zd-dock .zd-slider {
+  height: 5px;
+  background: linear-gradient(
+    to right,
+    var(--zd-accent-home) 0%,
+    var(--zd-accent-home) var(--fill, 0%),
+    rgba(255, 255, 255, 0.24) var(--fill, 0%),
+    rgba(255, 255, 255, 0.24) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.32);
+}
+
+.zd-dock .zd-slider::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 3px rgba(0, 0, 0, 0.38),
+    0 2px 7px rgba(0, 0, 0, 0.45);
+}
+
+.zd-dock .zd-dock-title {
+  font-size: 12.5px;
+  color: #f3f8ff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.zd-dock .zd-dock-sub {
+  color: rgba(228, 238, 249, 0.78);
+}
+
+.zd-dock .zd-dock-time {
+  color: rgba(234, 242, 252, 0.84);
+  font-size: 10.5px;
+}
+
+.zd-dock-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.zd-dock-controls-end {
+  gap: 1px;
+}
+
+.zd-dock-track {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 6px;
+}
+
+.zd-dock-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.zd-dock-title {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zd-dock-sub {
+  font-size: 10px;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+}
+
+.zd-dock-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zd-dock-progress > :nth-child(2) {
+  flex: 1 1 auto;
+}
+
+.zd-dock-time {
+  font-family: var(--zd-font-mono);
+  font-size: 10px;
+  color: var(--zd-muted);
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.zd-dock-time[data-align="start"] {
+  text-align: left;
+}
+
+.zd-dock-repeat {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.zd-dock-repeat > span {
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--zd-muted);
+  line-height: 1;
+}
+
+/* 三态播放按钮：悬停 / 聚焦给出模式说明 */
+.zd-dock-mode {
+  position: relative;
+  display: inline-flex;
+}
+
+.zd-dock-mode-tip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 170px;
+  padding: 8px 10px;
+  border: 1px solid var(--zd-glass-line);
+  border-radius: var(--zd-radius-sub);
+  background: color-mix(in srgb, var(--zd-paper) 92%, transparent);
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 34%, transparent);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition:
+    opacity var(--zd-dur-2) var(--zd-ease),
+    transform var(--zd-dur-2) var(--zd-ease),
+    visibility 0s linear var(--zd-dur-2);
+  pointer-events: none;
+}
+
+.zd-dock-mode-tip strong {
+  font-size: 11px;
+  color: var(--zd-ink);
+}
+
+.zd-dock-mode-tip span {
+  font-size: 10px;
+  color: var(--zd-ink-2);
+}
+
+.zd-dock-mode-hint {
+  color: var(--zd-muted) !important;
+}
+
+.zd-dock-mode:hover .zd-dock-mode-tip,
+.zd-dock-mode:focus-within .zd-dock-mode-tip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+
+.zd-popover-label {
+  font-size: 10px;
+  color: var(--zd-muted);
+  min-width: 26px;
+}
+
+/* 唤出把手 */
+.zd-handle {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: var(--zd-z-dock);
+  width: 236px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  opacity: 0.14;
+  cursor: pointer;
+  transition: opacity var(--zd-dur-2) var(--zd-ease);
+  touch-action: manipulation;
+}
+
+.zd-handle::after {
+  content: "";
+  width: 56px;
+  height: 4px;
+  border-radius: var(--zd-radius-pill);
+  background: var(--zd-ink);
+  transition: width var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-handle:hover,
+.zd-handle:focus-visible {
+  opacity: 0.55;
+  outline: none;
+}
+
+.zd-handle:hover::after {
+  width: 84px;
+}
+
+@media (max-width: 720px) {
+  .zd-dock {
+    width: calc(100vw - 24px);
+    gap: var(--zd-space-sm);
+    padding: 6px 8px;
+  }
+
+  .zd-dock-optional {
+    display: none;
+  }
+
+  .zd-dock-meta .zd-dock-sub {
+    display: none;
+  }
+}
+
+/* 浮层容器 */
+.zd-overlay-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--zd-z-overlay);
+  pointer-events: none;
+}
+
+.zd-overlay-layer > * {
+  pointer-events: auto;
+}
+
+/* 下载进度 / 结果提示 */
+.zd-download-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: calc(var(--zd-z-overlay) + 2);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--zd-space-sm);
+  min-width: 240px;
+  max-width: 360px;
+  padding: 10px 12px;
+  animation: zd-pop-in var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-download-icon {
+  display: inline-flex;
+  color: var(--zd-accent-home);
+  padding-top: 1px;
+}
+
+.zd-download-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.zd-download-message {
+  font-size: 11px;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-ink-2);
+  word-break: break-all;
+}
+
+.zd-download-track {
+  display: block;
+  height: 3px;
+  border-radius: var(--zd-radius-pill);
+  background: var(--zd-glass-sheen);
+  overflow: hidden;
+}
+
+.zd-download-track > span {
+  display: block;
+  height: 100%;
+  background: var(--zd-accent-home);
+  transition: width var(--zd-dur-1) linear;
+}
+
+.zd-download-toast[data-tone="error"] .zd-download-icon {
+  color: var(--zd-danger);
+}
+
+.zd-download-toast[data-tone="error"] .zd-download-track > span,
+.zd-download-toast[data-tone="success"] .zd-download-track > span {
+  background: var(--zd-ink-2);
+}
+
+.zd-empty {
+  padding: 28px 16px;
+  text-align: center;
+  font-size: var(--zd-text-sm);
+  line-height: var(--zd-leading-body);
+  color: var(--zd-muted);
+}
+
+.zd-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--zd-radius-pill);
+  border: 1px solid var(--zd-glass-line);
+  color: var(--zd-muted);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.zd-tag[data-tone="warn"] {
+  color: var(--zd-accent-shelf);
+  border-color: color-mix(in srgb, var(--zd-accent-shelf) 32%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zd-dock-wrap,
+  .zd-handle,
+  .zd-handle::after,
+  .zd-view {
+    transition: none;
+  }
+}

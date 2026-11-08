@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
           if (existing) {
             if (body.name) existing.name = body.name as string;
             if (body.nameEn) existing.nameEn = body.nameEn as string;
+            if (typeof body.description === "string") existing.description = body.description;
             existing.updatedAt = now();
             savePlaylists(store);
             return NextResponse.json({ ok: true, playlist: existing });
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
           id: customId || generatePlaylistId(),
           name,
           nameEn,
+          description: (body.description as string) || "",
           trackIds: [],
           createdAt: now(),
           updatedAt: now(),
@@ -71,6 +73,7 @@ export async function POST(request: NextRequest) {
         }
         if (body.name) pl.name = body.name as string;
         if (body.nameEn) pl.nameEn = body.nameEn as string;
+        if (typeof body.description === "string") pl.description = body.description;
         pl.updatedAt = now();
         savePlaylists(store);
         return NextResponse.json({ ok: true });

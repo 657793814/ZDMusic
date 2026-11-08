@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
-import { readFile, writeFile, access } from "fs/promises";
-import path from "path";
+import { execSync } from "child_process";
+import { readFile, writeFile, access, unlink } from "fs/promises";
 import { resolveMusicPath } from "@/app/lib/tracks";
 
 export const dynamic = "force-dynamic";
+
+const FFPROBE = "/opt/homebrew/bin/ffprobe";
 
 interface LRCLibResult {
   id: number;
@@ -22,15 +24,7 @@ export interface LyricLine {
   text: string;
 }
 
-interface LyricsResponse {
-  title: string;
-  artist: string;
-  synced: LyricLine[];
-  plain: string | null;
-  duration: number;
-  fromLocal?: boolean;
-  notFound?: boolean;
-}
+type LyricsSource = "local" | "embedded" | "lrclib" | "custom" | "none";
 
 /**
  * Parse LRC synced lyrics into structured array
@@ -53,7 +47,20 @@ function parseLRC(lrc: string): LyricLine[] {
   return lines;
 }
 
-// ── 本地 LRC 文件读写 ──
+/**
+ * 歌词文件编码兜底：UTF-8 优先，出现替换字符再按 GBK 解码。
+ * 国内大量 .lrc 是 GBK/GB18030 编码，直接按 UTF-8 读会整篇乱码。
+ */
+function decodeLyricsBuffer(buffer: Buffer): string {
+  let text = buffer.toString("utf-8");
+  if (!text.includes("\uFFFD")) return text.replace(/^\uFEFF/, "");
+  try {
+    text = new TextDecoder("gbk").decode(buffer);
+  } catch {
+    /* 运行环境不支持 GBK 时保留 UTF-8 结果 */
+  }
+  return text.replace(/^\uFEFF/, "");
+}
 
 function lrcPathForTrack(trackId: string): string | null {
   // trackId = "20260606/filename.mp3"
@@ -68,7 +75,8 @@ async function readLocalLRC(trackId: string): Promise<string | null> {
   if (!lrcFile) return null;
   try {
     await access(lrcFile);
-    const content = await readFile(lrcFile, "utf-8");
+    const buffer = await readFile(lrcFile);
+    const content = decodeLyricsBuffer(buffer);
     return content || null;
   } catch {
     return null;
@@ -85,6 +93,41 @@ async function saveLocalLRC(trackId: string, lrcContent: string): Promise<void> 
   }
 }
 
+/** 读取内嵌歌词标签（ID3 USLT / TXXX:LYRICS 等，ffprobe 统一映射到 format.tags） */
+function readEmbeddedLRC(trackId: string): string | null {
+  const fullPath = resolveMusicPath(trackId);
+  if (!fullPath) return null;
+  try {
+    const cmd = `${FFPROBE} -v quiet -print_format json -show_format ${JSON.stringify(fullPath)}`;
+    const out = execSync(cmd, { timeout: 3000, encoding: "utf-8" });
+    const tags = (JSON.parse(out).format?.tags ?? {}) as Record<string, string>;
+    for (const [key, value] of Object.entries(tags)) {
+      if (!/lyric|uslt|unsynced/i.test(key)) continue;
+      if (typeof value === "string" && value.trim()) return value;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function buildPayload(
+  raw: string,
+  meta: { title: string; artist: string; duration: number },
+  source: LyricsSource,
+) {
+  const synced = parseLRC(raw);
+  return {
+    title: meta.title,
+    artist: meta.artist,
+    synced,
+    plain: synced.length ? null : raw.trim() || null,
+    duration: meta.duration,
+    source,
+    hasTimestamps: synced.length > 0,
+  };
+}
+
 export async function GET(req: NextRequest) {
   const title = req.nextUrl.searchParams.get("title")?.trim();
   const artist = req.nextUrl.searchParams.get("artist")?.trim();
@@ -94,23 +137,33 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "title is required" }, { status: 400 });
   }
 
-  // ── 1. 先查本地 .lrc 文件 ──
+  // ── 1. 本地 .lrc 文件（用户自定义或之前从 LRCLib 缓存下来的）──
   if (trackId) {
     const local = await readLocalLRC(trackId);
     if (local) {
       const lines = parseLRC(local);
-      return Response.json({
-        title,
-        artist: artist ?? "",
-        synced: lines,
-        plain: null,
-        duration: 0,
-        fromLocal: true,
-      });
+      if (lines.length) {
+        return Response.json({ ...buildPayload(local, { title, artist: artist ?? "", duration: 0 }, "local"), fromLocal: true });
+      }
+      if (local.trim()) {
+        return Response.json({ ...buildPayload(local, { title, artist: artist ?? "", duration: 0 }, "local"), fromLocal: true });
+      }
     }
   }
 
-  // ── 2. 本地没有，调用 LRCLIB ──
+  // ── 2. 内嵌歌词标签（ID3/USLT）──
+  if (trackId) {
+    try {
+      const embedded = readEmbeddedLRC(trackId);
+      if (embedded) {
+        return Response.json(buildPayload(embedded, { title, artist: artist ?? "", duration: 0 }, "embedded"));
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // ── 3. 本地没有，调用 LRCLIB ──
   try {
     const searchParams = new URLSearchParams();
     searchParams.set("track_name", title);
@@ -172,23 +225,21 @@ export async function GET(req: NextRequest) {
         title,
         artist: artist ?? "",
         synced: [],
-        plain: null,
-        duration: 0,
+        plain: plainLyrics,
+        duration: resultDuration,
         notFound: true,
+        source: "none" as LyricsSource,
       });
     }
 
-    // ── 3. 保存到本地 ──
+    // ── 4. 保存到本地，下次直接命中 ──
     if (trackId && rawLRC) {
       await saveLocalLRC(trackId, rawLRC);
     }
 
     return Response.json({
-      title: resultTitle,
-      artist: resultArtist,
-      synced: parseLRC(rawLRC),
+      ...buildPayload(rawLRC, { title: resultTitle, artist: resultArtist, duration: resultDuration }, "lrclib"),
       plain: plainLyrics,
-      duration: resultDuration,
     });
   } catch (err) {
     return Response.json(
@@ -199,8 +250,62 @@ export async function GET(req: NextRequest) {
         synced: [],
         plain: null,
         duration: 0,
+        source: "none" as LyricsSource,
       },
       { status: 502 }
     );
   }
+}
+
+/** 保存自定义歌词（粘贴 / 导入 lrc）。内容不需要带时间戳，纯文本也能存。 */
+export async function POST(req: NextRequest) {
+  let body: { trackId?: string; content?: string };
+  try {
+    body = (await req.json()) as { trackId?: string; content?: string };
+  } catch {
+    return Response.json({ error: "请求体不是合法 JSON" }, { status: 400 });
+  }
+  const trackId = body.trackId?.trim();
+  const content = body.content ?? "";
+  if (!trackId) return Response.json({ error: "缺少 trackId" }, { status: 400 });
+  if (!content.trim()) return Response.json({ error: "歌词内容为空" }, { status: 400 });
+  const lrcFile = lrcPathForTrack(trackId);
+  if (!lrcFile) return Response.json({ error: "曲目路径无效" }, { status: 400 });
+  try {
+    await writeFile(lrcFile, content, "utf-8");
+  } catch (err) {
+    return Response.json(
+      { error: `写入失败：${(err as NodeJS.ErrnoException).message}` },
+      { status: 500 },
+    );
+  }
+  return Response.json({ ok: true, path: lrcFile, synced: parseLRC(content).length });
+}
+
+/** 清除自定义 / 缓存的本地歌词 */
+export async function DELETE(req: NextRequest) {
+  let body: { trackId?: string };
+  try {
+    body = (await req.json()) as { trackId?: string };
+  } catch {
+    return Response.json({ error: "请求体不是合法 JSON" }, { status: 400 });
+  }
+  const trackId = body.trackId?.trim();
+  if (!trackId) return Response.json({ error: "缺少 trackId" }, { status: 400 });
+  const lrcFile = lrcPathForTrack(trackId);
+  if (!lrcFile) return Response.json({ error: "曲目路径无效" }, { status: 400 });
+  try {
+    await access(lrcFile);
+  } catch {
+    return Response.json({ ok: true, removed: false });
+  }
+  try {
+    await unlink(lrcFile);
+  } catch (err) {
+    return Response.json(
+      { error: `删除失败：${(err as NodeJS.ErrnoException).message}` },
+      { status: 500 },
+    );
+  }
+  return Response.json({ ok: true, removed: true });
 }

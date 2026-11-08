@@ -1,0 +1,1219 @@
+/* ─── P3 舞台层 ─── */
+
+.zd-stage-view {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 左上角返回 Home：玻璃 pill，触屏也够大 */
+.zd-stage-back {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px 0 13px;
+  border-radius: var(--zd-radius-pill);
+  color: var(--zd-ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: var(--zd-leading-ui);
+  cursor: pointer;
+  transition:
+    border-color var(--zd-dur-2) var(--zd-ease),
+    background var(--zd-dur-2) var(--zd-ease),
+    transform var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-stage-back:hover {
+  border-color: var(--zd-glass-line-strong);
+  transform: translateY(-1px);
+}
+
+.zd-stage-back:focus-visible {
+  outline: 2px solid var(--zd-accent-home);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .zd-stage-back {
+    top: 12px;
+    left: 12px;
+    min-height: 48px;
+    padding: 0 18px 0 15px;
+    font-size: 13px;
+  }
+}
+
+.zd-stage-visual {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: #05070a;
+  perspective: 1400px;
+  perspective-origin: 50% 43%;
+}
+
+.zd-stage-scene {
+  position: absolute;
+  inset: 0;
+  --zd-stage-bass: 0;
+  --zd-par-x: 0;
+  --zd-par-y: 0;
+}
+
+/* 底层暗场：固定不参与视差 */
+.zd-stage-base {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      62% 44% at 50% 43%,
+      color-mix(in srgb, var(--zd-stage-tone) 8%, transparent) 0%,
+      transparent 72%
+    ),
+    linear-gradient(180deg, #05070a 0%, #090c11 48%, #06080c 100%);
+}
+
+/* 底部色调层：曲目主色，低透明度，保持深色不发脏 */
+.zd-stage-grade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 58%;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--zd-stage-tone) 24%, transparent) 0%,
+    color-mix(in srgb, var(--zd-stage-tone) 7%, transparent) 46%,
+    transparent 82%
+  );
+  opacity: calc(0.88 + var(--zd-stage-bass) * 0.12);
+}
+
+/* 三层景深：不同视差位移 + 不同插值时长 */
+.zd-stage-layer {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.zd-stage-far {
+  transition: transform 1.9s var(--zd-ease);
+  transform: translate3d(calc(var(--zd-par-x) * 9px), calc(var(--zd-par-y) * 6px), 0)
+    scale(calc(1 + var(--zd-stage-bass) * 0.02));
+}
+
+.zd-stage-mid {
+  transition: transform 1.1s var(--zd-ease);
+  transform: translate3d(calc(var(--zd-par-x) * 20px), calc(var(--zd-par-y) * 14px), 0);
+}
+
+.zd-stage-near {
+  transition: transform 0.7s var(--zd-ease);
+  transform: translate3d(calc(var(--zd-par-x) * 34px), calc(var(--zd-par-y) * 22px), 0);
+}
+
+/* 封面后方的远景光晕 */
+.zd-stage-aura {
+  position: absolute;
+  left: 50%;
+  top: 43%;
+  width: min(62vh, 620px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--zd-stage-tone) 20%, transparent),
+    transparent 74%
+  );
+  opacity: calc(0.55 + var(--zd-stage-bass) * 0.3);
+}
+
+/* ── 候选 A：暗场雾 ── */
+.zd-fog {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+}
+
+.zd-fog[data-i="1"] {
+  width: 70vw;
+  height: 54vh;
+  left: -8vw;
+  bottom: -10vh;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--zd-stage-tone) 34%, transparent),
+    transparent 78%
+  );
+  opacity: 0.6;
+  animation: zd-fog-a 32s ease-in-out infinite alternate;
+}
+
+.zd-fog[data-i="2"] {
+  width: 60vw;
+  height: 46vh;
+  right: -10vw;
+  bottom: -2vh;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--zd-stage-tone-2) 26%, transparent),
+    transparent 78%
+  );
+  opacity: 0.48;
+  animation: zd-fog-b 40s ease-in-out infinite alternate;
+}
+
+.zd-fog[data-i="3"] {
+  width: 48vw;
+  height: 30vh;
+  left: 28vw;
+  bottom: 6vh;
+  background: radial-gradient(closest-side, rgba(235, 244, 255, 0.05), transparent 80%);
+  opacity: 0.35;
+  animation: zd-fog-a 26s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes zd-fog-a {
+  from {
+    transform: translate3d(-2%, 1.5%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, -2%, 0) scale(1.08);
+  }
+}
+
+@keyframes zd-fog-b {
+  from {
+    transform: translate3d(2%, 2%, 0) scale(1.04);
+  }
+  to {
+    transform: translate3d(-3%, -1.5%, 0) scale(1);
+  }
+}
+
+/* ── 候选 B：光幕 ── */
+.zd-beams {
+  position: absolute;
+  inset: -14% -8%;
+}
+
+.zd-beam {
+  position: absolute;
+  top: -30%;
+  width: 15vw;
+  height: 150%;
+  rotate: 11deg;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--zd-stage-tone) 34%, transparent) 0%,
+    color-mix(in srgb, var(--zd-stage-tone) 10%, transparent) 48%,
+    transparent 78%
+  );
+  filter: blur(18px);
+  opacity: 0.34;
+  animation: zd-beam-sway 22s ease-in-out infinite alternate;
+}
+
+.zd-beam[data-i="1"] {
+  left: 16%;
+  animation-delay: -6s;
+}
+
+.zd-beam[data-i="2"] {
+  left: 40%;
+  width: 20vw;
+  opacity: 0.42;
+  animation-delay: -12s;
+}
+
+.zd-beam[data-i="3"] {
+  left: 64%;
+  animation-delay: -3s;
+}
+
+@keyframes zd-beam-sway {
+  from {
+    transform: translate3d(-10px, 0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(14px, 6px, 0) rotate(2deg);
+  }
+}
+
+/* ── 候选 C：涟漪 ── */
+.zd-horizon {
+  position: absolute;
+  left: 50%;
+  top: 57%;
+  width: 150vw;
+  height: 60vh;
+  translate: -50% 0;
+}
+
+.zd-horizon-glow {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 116vw;
+  height: 32vh;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--zd-stage-tone) 26%, transparent),
+    transparent 74%
+  );
+  opacity: calc(0.6 + var(--zd-stage-bass) * 0.25);
+}
+
+.zd-ripple {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 86vw;
+  aspect-ratio: 2.4 / 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--zd-stage-tone) 30%, transparent);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--zd-stage-tone) 12%, transparent);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: zd-ripple 15.9s linear infinite;
+}
+
+@keyframes zd-ripple {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.26;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* ── 近景微粒 / 光带 ── */
+.zd-dust,
+.zd-spark {
+  position: absolute;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--zd-stage-tone) 62%, #ffffff);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--zd-stage-tone) 36%, transparent);
+  will-change: transform;
+  animation: zd-dust-rise linear infinite;
+}
+
+.zd-spark {
+  animation-name: zd-spark-rise;
+}
+
+@keyframes zd-dust-rise {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(5px, -16px, 0);
+  }
+  100% {
+    transform: translate3d(-3px, -34px, 0);
+  }
+}
+
+@keyframes zd-spark-rise {
+  0% {
+    transform: translate3d(0, 6px, 0);
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(4px, -46px, 0);
+    opacity: 0;
+  }
+}
+
+.zd-streak {
+  position: absolute;
+  height: 1px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--zd-stage-tone) 48%, transparent),
+    transparent
+  );
+  animation: zd-streak-drift 20s ease-in-out infinite alternate;
+}
+
+@keyframes zd-streak-drift {
+  from {
+    transform: translate3d(-6px, 0, 0);
+    opacity: 0.2;
+  }
+  to {
+    transform: translate3d(10px, -4px, 0);
+    opacity: 0.45;
+  }
+}
+
+/* 中景：封面卡 + 呼吸光晕 */
+.zd-stage-halo {
+  position: absolute;
+  left: 50%;
+  top: 43%;
+  width: min(52vh, 520px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--zd-stage-tone) 26%, transparent) 0%,
+    color-mix(in srgb, var(--zd-stage-tone) 8%, transparent) 46%,
+    transparent 72%
+  );
+  opacity: calc(0.7 + var(--zd-stage-bass) * 0.2);
+  animation: zd-halo-breathe 14s ease-in-out infinite alternate;
+}
+
+@keyframes zd-halo-breathe {
+  from {
+    transform: scale(0.97);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+.zd-stage-disc {
+  position: absolute;
+  left: 50%;
+  top: 43%;
+  translate: -50% -50%;
+  width: min(34vh, 320px);
+  aspect-ratio: 1;
+  border-radius: var(--zd-radius-hero);
+  border: 1px solid var(--zd-glass-line);
+  background-position: center;
+  background-size: cover;
+  box-shadow:
+    var(--zd-shadow-drawer),
+    inset 0 1px 0 var(--zd-glass-line-strong);
+  opacity: 0.9;
+  /* 父层 pointer-events:none，封面卡单独接住点击，避免点封面穿透到空白区退出 */
+  pointer-events: auto;
+  backface-visibility: hidden;
+  will-change: transform;
+  animation: zd-stage-float 9s ease-in-out infinite alternate;
+}
+
+/* 无封面时的黑胶替代主体，避免舞台中景空缺 */
+.zd-stage-disc[data-has-cover="false"] {
+  border-color: color-mix(in srgb, var(--zd-stage-tone) 30%, var(--zd-glass-line));
+  background:
+    repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.038) 0 1px, transparent 1px 5px),
+    radial-gradient(circle at 50% 50%, #1a2028 0%, #0c1016 62%, #090c11 100%);
+  box-shadow:
+    0 0 90px color-mix(in srgb, var(--zd-stage-tone) 22%, transparent),
+    var(--zd-shadow-drawer),
+    inset 0 1px 0 var(--zd-glass-line-strong);
+}
+
+.zd-stage-disc[data-playing="false"] {
+  animation-play-state: paused;
+}
+
+.zd-stage-disc-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--zd-ink) 14%, transparent),
+    transparent 42%,
+    color-mix(in srgb, var(--zd-bg) 24%, transparent)
+  );
+}
+
+@keyframes zd-stage-float {
+  from {
+    transform: rotateX(8deg) rotateY(-10deg) translateY(-8px) scale(0.985);
+  }
+  to {
+    transform: rotateX(3deg) rotateY(10deg) translateY(10px) scale(1.02);
+  }
+}
+
+/* 四周压暗 + 顶部收边，保证文字对比 */
+.zd-stage-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(115% 85% at 50% 42%, transparent 42%, rgba(3, 5, 8, 0.66) 100%),
+    linear-gradient(
+      180deg,
+      rgba(3, 5, 8, 0.5) 0%,
+      transparent 24%,
+      transparent 72%,
+      rgba(3, 5, 8, 0.5) 100%
+    );
+}
+
+/* 暂停时整场静止 */
+.zd-stage-scene[data-playing="false"]
+  :is(.zd-fog, .zd-beam, .zd-ripple, .zd-dust, .zd-spark, .zd-streak, .zd-stage-disc, .zd-stage-halo) {
+  animation-play-state: paused;
+}
+
+.zd-stage-info {
+  position: absolute;
+  left: 50%;
+  bottom: 132px;
+  transform: translateX(-50%);
+  width: min(760px, calc(100vw - 96px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  pointer-events: none;
+  animation: zd-stage-rise var(--zd-dur-4) var(--zd-ease) both;
+}
+
+.zd-stage-title {
+  margin: 0;
+  font-size: clamp(28px, 4.6vw, 58px);
+  font-weight: 760;
+  /* 中文标题常折两行，1.02 会上下贴字；改用展示段行高 */
+  line-height: var(--zd-leading-display);
+  letter-spacing: 0.01em;
+  color: var(--zd-ink);
+  text-shadow: 0 10px 42px color-mix(in srgb, var(--zd-bg) 45%, transparent);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.zd-stage-artist {
+  margin: 0;
+  font-size: var(--zd-text-body);
+  line-height: 1.5;
+  color: var(--zd-ink-2);
+  opacity: 0.72;
+  letter-spacing: 0.04em;
+}
+
+.zd-stage-album {
+  font-size: 10px;
+  color: var(--zd-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* 左下角当前曲缩略 */
+.zd-track-thumb {
+  position: absolute;
+  left: 24px;
+  bottom: 104px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 280px;
+  padding: 8px 12px 8px 8px;
+  border-radius: var(--zd-radius-drawer);
+  color: var(--zd-ink-2);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform var(--zd-dur-2) var(--zd-ease),
+    border-color var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-track-thumb:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--zd-accent-home) 34%, var(--zd-hair-2));
+}
+
+.zd-track-thumb-art {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: var(--zd-radius-sub);
+  border: 1px solid var(--zd-glass-line);
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--zd-tint) 30%, var(--zd-paper)),
+    var(--zd-paper) 78%
+  );
+  background-position: center;
+  background-size: cover;
+  box-shadow: var(--zd-shadow-cover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--zd-ink);
+  overflow: hidden;
+}
+
+.zd-track-thumb-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.zd-track-thumb-title {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zd-track-thumb-sub {
+  font-size: 10px;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes zd-stage-rise {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  .zd-stage-info {
+    width: calc(100vw - 48px);
+    bottom: 118px;
+  }
+
+  .zd-track-thumb {
+    left: 12px;
+    bottom: 96px;
+    max-width: 200px;
+  }
+
+  .zd-track-thumb-meta {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 静态渐变，不做任何位移/闪烁 */
+  .zd-stage-scene
+    :is(.zd-fog, .zd-beam, .zd-ripple, .zd-dust, .zd-spark, .zd-streak, .zd-stage-disc, .zd-stage-halo) {
+    animation: none;
+  }
+
+  .zd-stage-far,
+  .zd-stage-mid,
+  .zd-stage-near,
+  .zd-stage-halo,
+  .zd-stage-disc {
+    transition: none;
+    transform: none !important;
+  }
+
+  /* 返回过渡不做位移动画 */
+  .zd-stage-back,
+  .zd-stage-back:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* ---------- three.js canvas ---------- */
+.zd-stage-canvas-host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background:
+    radial-gradient(118% 88% at 50% 38%, #101720 0%, #080c11 46%, #030405 100%);
+}
+
+.zd-stage-canvas3d {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+.zd-stage-canvas3d:active {
+  cursor: grabbing;
+}
+
+/* ---------- 视觉控制台 ---------- */
+.zd-stage-console {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.zd-stage-console-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--zd-radius-pill);
+  color: var(--zd-ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: var(--zd-leading-ui);
+  cursor: pointer;
+  transition:
+    border-color var(--zd-dur-2) var(--zd-ease),
+    transform var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-stage-console-toggle:hover {
+  border-color: var(--zd-glass-line-strong);
+  transform: translateY(-1px);
+}
+
+.zd-stage-console-toggle:focus-visible {
+  outline: 2px solid var(--zd-accent-home);
+  outline-offset: 2px;
+}
+
+.zd-stage-console-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--zd-accent-home);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--zd-accent-home) 60%, transparent);
+}
+
+.zd-stage-console-dot[data-mode="css"] {
+  background: var(--zd-muted);
+  box-shadow: none;
+}
+
+.zd-stage-console-panel {
+  width: 306px;
+  max-height: calc(100vh - 104px);
+  padding: 14px;
+  border-radius: var(--zd-radius-drawer);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  pointer-events: auto;
+  animation: zd-stage-console-in var(--zd-dur-3) var(--zd-ease) both;
+}
+
+.zd-stage-console-panel[aria-hidden="true"] {
+  display: none;
+}
+
+@keyframes zd-stage-console-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.zd-stage-console-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.zd-stage-console-mode {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--zd-muted);
+}
+
+/* 视觉模式切换：粒子云 / 音域回响 */
+.zd-stage-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.zd-stage-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 9px;
+  border: 1px solid var(--zd-hair-2);
+  border-radius: var(--zd-radius-sub);
+  background: color-mix(in srgb, var(--zd-paper) 60%, transparent);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.zd-stage-mode:hover {
+  border-color: color-mix(in srgb, var(--zd-accent-home) 45%, transparent);
+}
+
+.zd-stage-mode[data-active="true"] {
+  border-color: color-mix(in srgb, var(--zd-accent-home) 65%, transparent);
+  background: color-mix(in srgb, var(--zd-accent-home) 14%, var(--zd-paper));
+}
+
+.zd-stage-mode-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--zd-ink);
+}
+
+.zd-stage-mode-note {
+  font-size: 9px;
+  line-height: 1.35;
+  color: var(--zd-muted);
+}
+
+/* 音域回响：独立 WebGL iframe 图层 */
+.zd-stage-echo-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  z-index: 2;
+  background: #05070a;
+  pointer-events: none;
+}
+
+/* 音域回响模式下，粒子预设卡弱化（只对粒子云生效） */
+.zd-stage-preset[data-dim="true"] {
+  opacity: 0.48;
+}
+
+.zd-stage-presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.zd-stage-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 9px;
+  border: 1px solid var(--zd-hair-2);
+  border-radius: var(--zd-radius-sub);
+  background: color-mix(in srgb, var(--zd-paper) 72%, transparent);
+  color: var(--zd-ink-2);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--zd-dur-2) var(--zd-ease),
+    background var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-stage-preset:hover {
+  border-color: var(--zd-glass-line-strong);
+}
+
+.zd-stage-preset[data-active="true"] {
+  border-color: color-mix(in srgb, var(--zd-accent-home) 52%, transparent);
+  background: color-mix(in srgb, var(--zd-accent-home) 12%, var(--zd-paper));
+}
+
+.zd-stage-preset-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-ink);
+}
+
+.zd-stage-preset-note {
+  font-size: 9px;
+  line-height: 1.35;
+  color: var(--zd-muted);
+}
+
+.zd-stage-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.zd-stage-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.zd-stage-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.zd-stage-row-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--zd-ink);
+}
+
+.zd-stage-row-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--zd-muted);
+}
+
+.zd-stage-range {
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--zd-accent-home);
+  cursor: pointer;
+}
+
+.zd-stage-row-driver {
+  font-size: 9px;
+  line-height: 1.3;
+  color: var(--zd-muted);
+}
+
+.zd-stage-switches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+  border-top: 1px solid var(--zd-hair-1);
+}
+
+.zd-stage-switch {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.zd-stage-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.zd-stage-switch-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 17px;
+  border-radius: var(--zd-radius-pill);
+  border: 1px solid var(--zd-hair-2);
+  background: color-mix(in srgb, var(--zd-paper) 80%, transparent);
+  transition: background var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-stage-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--zd-muted);
+  transition:
+    transform var(--zd-dur-2) var(--zd-ease),
+    background var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-stage-switch input:checked + .zd-stage-switch-track {
+  border-color: color-mix(in srgb, var(--zd-accent-home) 46%, transparent);
+  background: color-mix(in srgb, var(--zd-accent-home) 22%, var(--zd-paper));
+}
+
+.zd-stage-switch input:checked + .zd-stage-switch-track::after {
+  transform: translateX(13px);
+  background: var(--zd-accent-home);
+}
+
+.zd-stage-switch input:focus-visible + .zd-stage-switch-track {
+  outline: 2px solid var(--zd-accent-home);
+  outline-offset: 2px;
+}
+
+.zd-stage-switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 10px;
+  color: var(--zd-ink-2);
+}
+
+.zd-stage-switch-driver {
+  font-size: 9px;
+  color: var(--zd-muted);
+}
+
+.zd-stage-console-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--zd-hair-1);
+}
+
+/* 实时频段电平：bass 紫 / mid 蓝 / high 金 */
+.zd-stage-bands {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1px solid var(--zd-hair-2);
+  border-radius: var(--zd-radius-sub);
+  background: color-mix(in srgb, var(--zd-paper) 62%, transparent);
+}
+
+.zd-stage-bands-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.zd-stage-bands-note {
+  font-size: 9px;
+  color: var(--zd-muted);
+}
+
+.zd-stage-bands[data-static="true"] .zd-stage-band-fill {
+  background: var(--zd-muted);
+}
+
+.zd-stage-band {
+  display: grid;
+  grid-template-columns: 26px 1fr 28px;
+  align-items: center;
+  gap: 6px;
+}
+
+.zd-stage-band-label {
+  font-size: 9px;
+  color: var(--zd-ink-2);
+}
+
+.zd-stage-band-track {
+  height: 4px;
+  border-radius: var(--zd-radius-pill);
+  background: color-mix(in srgb, var(--zd-ink) 10%, transparent);
+  overflow: hidden;
+}
+
+.zd-stage-band-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--zd-accent-home);
+  transition: width 90ms linear;
+}
+
+.zd-stage-band[data-tone="bass"] .zd-stage-band-fill {
+  background: color-mix(in srgb, var(--zd-accent-home) 76%, #b06cff);
+}
+
+.zd-stage-band[data-tone="mid"] .zd-stage-band-fill {
+  background: color-mix(in srgb, var(--zd-accent-home) 60%, #49b7ff);
+}
+
+.zd-stage-band[data-tone="high"] .zd-stage-band-fill {
+  background: color-mix(in srgb, var(--zd-accent-home) 60%, #ffd37a);
+}
+
+.zd-stage-band-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 9px;
+  color: var(--zd-muted);
+  text-align: right;
+}
+
+/* 分组折叠 */
+.zd-stage-group {
+  border-top: 1px solid var(--zd-hair-1);
+  padding-top: 8px;
+}
+
+.zd-stage-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  padding-bottom: 6px;
+}
+
+.zd-stage-group-head::-webkit-details-marker {
+  display: none;
+}
+
+.zd-stage-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--zd-ink);
+}
+
+.zd-stage-group-note {
+  font-size: 9px;
+  color: var(--zd-muted);
+}
+
+.zd-stage-group[open] .zd-stage-group-note {
+  opacity: 0.85;
+}
+
+/* 不可用项：灰掉并如实给原因 */
+.zd-stage-group-disabled {
+  opacity: 0.72;
+}
+
+.zd-stage-unsupported {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.zd-stage-unsupported-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px dashed var(--zd-hair-2);
+  border-radius: var(--zd-radius-sub);
+}
+
+.zd-stage-unsupported-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--zd-ink-2);
+}
+
+.zd-stage-unsupported-tag {
+  padding: 0 5px;
+  border-radius: var(--zd-radius-pill);
+  border: 1px solid var(--zd-hair-2);
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  color: var(--zd-muted);
+}
+
+.zd-stage-unsupported-tag[data-status="pending"] {
+  border-color: color-mix(in srgb, var(--zd-accent-home) 45%, transparent);
+  color: color-mix(in srgb, var(--zd-accent-home) 70%, var(--zd-ink));
+}
+
+.zd-stage-unsupported-reason {
+  font-size: 9px;
+  line-height: 1.35;
+  color: var(--zd-muted);
+}
+
+.zd-stage-console-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.zd-stage-stats {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  color: var(--zd-muted);
+}
+
+.zd-stage-reset {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border: 1px solid var(--zd-hair-2);
+  border-radius: var(--zd-radius-pill);
+  background: transparent;
+  color: var(--zd-ink-2);
+  font-size: 10px;
+  cursor: pointer;
+  transition: border-color var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-stage-reset:hover {
+  border-color: var(--zd-glass-line-strong);
+}
+
+@media (max-width: 760px) {
+  .zd-stage-console {
+    top: 12px;
+    right: 12px;
+  }
+
+  .zd-stage-console-toggle {
+    min-height: 48px;
+    padding: 0 18px;
+    font-size: 13px;
+  }
+
+  .zd-stage-console-panel {
+    width: calc(100vw - 24px);
+    max-width: 340px;
+    max-height: calc(100vh - 92px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zd-stage-console-panel {
+    animation: none;
+  }
+
+  .zd-stage-console-toggle,
+  .zd-stage-console-toggle:hover,
+  .zd-stage-preset,
+  .zd-stage-switch-track,
+  .zd-stage-switch-track::after {
+    transition: none;
+    transform: none;
+  }
+}

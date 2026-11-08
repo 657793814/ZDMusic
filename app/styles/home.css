@@ -1,0 +1,690 @@
+/* ─── P2 Home 首屏 ─── */
+
+.zd-home-view {
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding: clamp(24px, 4vw, 52px) clamp(20px, 5vw, 72px) 128px;
+}
+
+.zd-home-shell {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--zd-space-lg);
+}
+
+/* Hero：时钟 + 今日聆听 */
+.zd-home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr);
+  gap: var(--zd-space-xl);
+  align-items: stretch;
+  padding: clamp(20px, 3vw, 34px);
+  border-radius: var(--zd-radius-hero);
+  animation: zd-home-rise var(--zd-dur-4) var(--zd-ease) both;
+}
+
+.zd-home-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.zd-home-clock {
+  font-family: var(--zd-font-mono);
+  font-size: clamp(52px, 7.6vw, 96px);
+  font-weight: 300;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  color: var(--zd-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.zd-home-date {
+  font-size: var(--zd-text-sm);
+  line-height: 1.5;
+  color: var(--zd-muted);
+  letter-spacing: 0.08em;
+}
+
+.zd-home-greeting {
+  margin: 6px 0 0;
+  font-size: var(--zd-text-body);
+  line-height: var(--zd-leading-body);
+  color: var(--zd-ink-2);
+  opacity: 0.86;
+}
+
+/* 今日聆听 */
+.zd-home-stats {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--zd-space-md);
+  padding: var(--zd-space-md) 0 0;
+}
+
+.zd-home-stats-head,
+.zd-home-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--zd-space-md);
+}
+
+.zd-home-stats-hint {
+  font-size: 10px;
+  color: var(--zd-muted);
+  letter-spacing: 0.04em;
+}
+
+.zd-home-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--zd-space-sm);
+}
+
+.zd-home-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--zd-radius-sub);
+  border: 1px solid var(--zd-hair);
+  background: color-mix(in srgb, var(--zd-ink) 6%, transparent);
+}
+
+.zd-home-stat-value {
+  font-family: var(--zd-font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--zd-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.zd-home-stat-label {
+  font-size: 10px;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-muted);
+}
+
+.zd-home-stats[data-empty="true"] .zd-home-stat-value {
+  color: var(--zd-muted);
+}
+
+/* 快捷 chip */
+.zd-home-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--zd-space-sm);
+  animation: zd-home-rise var(--zd-dur-4) var(--zd-ease) 0.06s both;
+}
+
+.zd-home-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--zd-muted);
+  letter-spacing: 0.04em;
+}
+
+/* 下半区：继续听 + 听歌画像并排 */
+.zd-home-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--zd-space-lg);
+  align-items: stretch;
+}
+
+.zd-home-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--zd-space-md);
+  padding: var(--zd-space-lg);
+  border-radius: var(--zd-radius-drawer);
+  animation: zd-home-rise var(--zd-dur-4) var(--zd-ease) 0.12s both;
+}
+
+.zd-home-continue-body {
+  display: flex;
+  gap: var(--zd-space-md);
+  align-items: center;
+  min-width: 0;
+}
+
+.zd-home-continue-art {
+  position: relative;
+  overflow: hidden;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  border-radius: var(--zd-radius-sub);
+  border: 1px solid var(--zd-glass-line);
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--zd-tint) 32%, var(--zd-paper)),
+    var(--zd-paper) 78%
+  );
+  background-position: center;
+  background-size: cover;
+  box-shadow: var(--zd-shadow-cover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--zd-ink);
+  overflow: hidden;
+}
+
+.zd-home-continue-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.zd-home-continue-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zd-home-continue-sub {
+  font-family: var(--zd-font-mono);
+  font-size: 10px;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-muted);
+}
+
+.zd-home-continue-bar {
+  position: relative;
+  height: 3px;
+  margin-top: 4px;
+  border-radius: var(--zd-radius-pill);
+  background: var(--zd-hair);
+  overflow: hidden;
+}
+
+.zd-home-continue-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--zd-accent-home);
+  transition: width var(--zd-dur-2) linear;
+}
+
+.zd-home-continue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--zd-space-sm);
+}
+
+.zd-home-continue-uid {
+  font-size: 10px;
+  color: var(--zd-muted);
+}
+
+/* 发现条 */
+.zd-home-discover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--zd-space-md);
+  min-width: 0;
+  animation: zd-home-rise var(--zd-dur-4) var(--zd-ease) 0.18s both;
+}
+
+.zd-home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--zd-muted);
+  font-size: var(--zd-text-sm);
+  cursor: pointer;
+  transition: color var(--zd-dur-1) var(--zd-ease);
+}
+
+.zd-home-link:hover {
+  color: var(--zd-ink);
+}
+
+.zd-home-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 推荐条标题后的小字说明 */
+.zd-home-rail-hint {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--zd-muted);
+  text-transform: none;
+}
+
+/* 听歌画像 */
+.zd-home-profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  flex: 1 1 auto;
+}
+
+.zd-home-profile-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--zd-space-md);
+  font-size: 12px;
+  line-height: var(--zd-leading-ui);
+  min-width: 0;
+}
+
+.zd-home-profile-label {
+  color: var(--zd-muted);
+  flex: 0 0 auto;
+}
+
+.zd-home-profile-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  color: var(--zd-ink);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zd-home-profile-value em {
+  font-style: normal;
+  font-family: var(--zd-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--zd-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.zd-home-profile-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  flex: 1 1 auto;
+  padding: 16px;
+  border-radius: var(--zd-radius-sub);
+  border: 1px dashed var(--zd-hair-2);
+  background: color-mix(in srgb, var(--zd-ink) 4%, transparent);
+}
+
+.zd-home-profile-empty-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--zd-ink-2);
+}
+
+.zd-home-profile-empty-hint {
+  font-size: 11px;
+  line-height: var(--zd-leading-body);
+  color: var(--zd-muted);
+}
+
+/* 我的歌单 */
+.zd-home-playlists {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(190px, 220px);
+  gap: var(--zd-space-sm);
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.zd-home-playlists::-webkit-scrollbar {
+  display: none;
+}
+
+.zd-home-playlist {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--zd-radius-sub);
+  border: 1px solid var(--zd-hair);
+  background: color-mix(in srgb, var(--zd-ink) 5%, transparent);
+  color: var(--zd-ink-2);
+  text-align: left;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition:
+    border-color var(--zd-dur-2) var(--zd-ease),
+    background var(--zd-dur-2) var(--zd-ease),
+    transform var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-home-playlist:hover {
+  border-color: var(--zd-glass-line);
+  background: color-mix(in srgb, var(--zd-ink) 9%, transparent);
+  transform: translateY(-2px);
+}
+
+.zd-home-playlist-art {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--zd-glass-line);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--zd-accent-shelf) 22%, var(--zd-paper)),
+    var(--zd-paper)
+  );
+  color: var(--zd-accent-shelf);
+}
+
+.zd-home-playlist-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.zd-home-playlist-name {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zd-home-playlist-sub {
+  font-size: 10px;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.zd-home-rail {
+  display: grid;
+  grid-auto-flow: column;
+  /* 密度随窗口宽度自适应，窄屏也能露出下一张作为滚动提示 */
+  grid-auto-columns: clamp(112px, 9.2vw, 148px);
+  gap: var(--zd-space-md);
+  overflow-x: auto;
+  padding: 4px 4px 12px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.zd-home-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.zd-home-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: var(--zd-ink-2);
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: transform var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-home-tile:hover {
+  transform: translateY(-4px);
+}
+
+.zd-home-tile:focus-visible {
+  outline: 2px solid var(--zd-accent-home);
+  outline-offset: 3px;
+  border-radius: var(--zd-radius-sub);
+}
+
+.zd-home-tile-art {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: var(--zd-radius-drawer);
+  border: 1px solid var(--zd-glass-line);
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--zd-tint) 26%, var(--zd-paper)),
+    var(--zd-paper) 78%
+  );
+  box-shadow:
+    var(--zd-shadow-cover),
+    inset 0 1px 0 var(--zd-glass-line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition:
+    border-color var(--zd-dur-2) var(--zd-ease),
+    box-shadow var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-home-tile-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 80% at 50% 0%,
+    color-mix(in srgb, var(--zd-ink) 8%, transparent),
+    transparent 60%
+  );
+}
+
+/* 真实封面统一 1:1 裁切 */
+.zd-home-tile-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* 无封面占位：按曲目 id 确定性生成的抽象几何（唱片纹 / 声波 / 同心环） */
+.zd-cover-ph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: inherit;
+  color: hsl(var(--zd-cover-h1, 190) 74% 74%);
+  background:
+    radial-gradient(
+      circle at 30% 22%,
+      hsl(var(--zd-cover-h1, 190) 42% 38% / 0.5),
+      transparent 56%
+    ),
+    radial-gradient(
+      circle at 74% 88%,
+      hsl(var(--zd-cover-h2, 232) 46% 30% / 0.44),
+      transparent 62%
+    ),
+    radial-gradient(circle at 50% 50%, transparent 42%, rgba(0, 0, 0, 0.42) 100%),
+    linear-gradient(
+      150deg,
+      hsl(var(--zd-cover-h1, 190) 26% 17%),
+      hsl(var(--zd-cover-h2, 232) 32% 9%)
+    );
+}
+
+.zd-cover-ph svg {
+  width: 64%;
+  height: 64%;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+
+.zd-home-tile:hover .zd-home-tile-art {
+  border-color: color-mix(in srgb, var(--zd-accent-home) 26%, var(--zd-glass-line));
+}
+
+.zd-home-tile-art[data-current="true"] {
+  border-color: color-mix(in srgb, var(--zd-accent-home) 58%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--zd-accent-home) 24%, transparent),
+    var(--zd-shadow-cover),
+    inset 0 1px 0 var(--zd-glass-line-strong);
+}
+
+.zd-home-tile[data-current="true"] .zd-home-tile-title {
+  color: var(--zd-accent-home);
+}
+
+.zd-home-tile-bars {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  padding: 3px 5px;
+  border-radius: var(--zd-radius-pill);
+  background: color-mix(in srgb, var(--zd-bg) 74%, transparent);
+}
+
+.zd-home-tile-bars i {
+  width: 2px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--zd-accent-home);
+}
+
+.zd-home-tile-bars[data-playing="true"] i {
+  animation: zd-home-bar 0.9s var(--zd-ease) infinite alternate;
+}
+
+.zd-home-tile-bars[data-playing="true"] i:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.zd-home-tile-bars[data-playing="true"] i:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes zd-home-bar {
+  from {
+    height: 3px;
+    opacity: 0.55;
+  }
+  to {
+    height: 11px;
+    opacity: 1;
+  }
+}
+
+.zd-home-tile-title {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: var(--zd-leading-ui);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zd-home-tile-sub {
+  font-size: 10px;
+  line-height: var(--zd-leading-ui);
+  color: var(--zd-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes zd-home-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 1000px) {
+  .zd-home-hero {
+    grid-template-columns: 1fr;
+    gap: var(--zd-space-lg);
+  }
+
+  /* 单列后今日数据紧贴时钟，补一条发丝线做分组 */
+  .zd-home-stats {
+    padding-top: var(--zd-space-lg);
+    border-top: 1px solid var(--zd-hair);
+  }
+
+  .zd-home-split {
+    grid-template-columns: 1fr;
+  }
+
+  .zd-home-playlists {
+    grid-auto-columns: minmax(170px, 200px);
+  }
+}
+
+@media (max-width: 640px) {
+  .zd-home-clock {
+    font-size: clamp(44px, 12vw, 64px);
+  }
+
+  .zd-home-shortcuts .zd-home-count {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zd-home-hero,
+  .zd-home-shortcuts,
+  .zd-home-card,
+  .zd-home-discover {
+    animation: none;
+  }
+
+  .zd-home-tile,
+  .zd-home-tile-bars i {
+    animation: none;
+    transition: none;
+  }
+
+  .zd-home-playlist,
+  .zd-home-playlist:hover {
+    transition: none;
+    transform: none;
+  }
+}

@@ -1,7 +1,6 @@
 "use client";
 
 import type { AgentState, ChatMessage } from "@/app/lib/types";
-import { useMode } from "@/app/context/ModeContext";
 import { useSSE } from "@/app/hooks/useSSE";
 import {
   createContext,
@@ -15,7 +14,7 @@ import {
 } from "react";
 
 type AgentCtxValue = AgentState & {
-  sendMessage: (text: string) => Promise<void>;
+  sendMessage: (text: string, extra?: Record<string, unknown>) => Promise<void>;
   addAgentMessage: (content: string) => void;
   queueConvert: (bvids: string[]) => void;
   cancel: () => void;
@@ -135,7 +134,6 @@ export function AgentProvider({
   children: ReactNode;
   chatApiPath?: string;
 }) {
-  const { mode } = useMode();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [stageMsg, setStageMsg] = useState("");
@@ -148,7 +146,6 @@ export function AgentProvider({
 
   const { send, loading, cancel: sseCancel } = useSSE({
     url: chatApiPath,
-    body: { mode },
     onMessage: (msg) => {
       if (msg.event === "output") {
         appendFromSdkPayload(msg.data, setMessages, setSessionId);
@@ -248,7 +245,7 @@ export function AgentProvider({
   }, [loading, flush]);
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, extra?: Record<string, unknown>) => {
       const trimmed = text.trim();
       if (!trimmed) return;
       const ts = Date.now();
@@ -268,7 +265,7 @@ export function AgentProvider({
           .map((msg) => ({ role: msg.role, content: msg.content }));
         return next;
       });
-      await send(trimmed, { history: historyRef.current });
+      await send(trimmed, { history: historyRef.current, ...extra });
     },
     [send]
   );

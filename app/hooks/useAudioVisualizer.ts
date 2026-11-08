@@ -56,12 +56,34 @@ export function useAudioVisualizer(
     }
   }, [audioElement]);
 
-  /** 设置主音量（0~1），同时同步到 audioElement.volume（非 AudioContext 场景回退） */
+  /** 设置主音量（0~1）；会取消未完成的淡入淡出排期 */
   const setMasterGain = useCallback((value: number) => {
     const gain = gainRef.current;
-    if (gain) {
-      gain.gain.value = Math.max(0, Math.min(1, value));
+    const ctx = ctxRef.current;
+    if (!gain) return;
+    const target = Math.max(0, Math.min(1, value));
+    if (ctx) {
+      gain.gain.cancelScheduledValues(ctx.currentTime);
+      gain.gain.setValueAtTime(target, ctx.currentTime);
     }
+    gain.gain.value = target;
+  }, []);
+
+  /** 线性渐变主音量（淡入/淡出），ms<=0 时等同于 setMasterGain */
+  const rampMasterGain = useCallback((value: number, ms: number) => {
+    const gain = gainRef.current;
+    const ctx = ctxRef.current;
+    if (!gain || !ctx) return;
+
+    const target = Math.max(0, Math.min(1, value));
+    gain.gain.cancelScheduledValues(ctx.currentTime);
+    gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+
+    if (ms <= 0) {
+      gain.gain.value = target;
+      return;
+    }
+    gain.gain.linearRampToValueAtTime(target, ctx.currentTime + ms / 1000);
   }, []);
 
   /** 设置静音状态（不走 audioElement.muted，它对 AudioContext 无效） */
@@ -95,6 +117,8 @@ export function useAudioVisualizer(
     ensureConnected,
     /** 控制主音量 GainNode（0~1） */
     setMasterGain,
+    /** 线性渐变主音量（淡入/淡出） */
+    rampMasterGain,
     /** 控制主静音（true=静音，false=恢复） */
     setMasterMuted,
   };

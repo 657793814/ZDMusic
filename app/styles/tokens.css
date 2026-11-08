@@ -1,0 +1,134 @@
+/* ─── ZDMusic design tokens (Mineradio-inspired, values rewritten) ───
+ * 只提炼视觉参数（配色 / 字号 / 圆角 / 动效曲线），不复制其 CSS 规则。
+ * 所有新组件只使用 --zd-* 变量；--color-* 为旧组件兼容别名。
+ */
+:root {
+  /* 背景与墨色：深色基调整体抬亮一档，内容面与底拉开层次 */
+  --zd-bg: #0b0d10;
+  --zd-paper: #15181d;
+  --zd-ink: #edf1f4;
+  --zd-ink-2: #d9dee4;
+  --zd-muted: #98a0aa;
+  --zd-hair: #23272d;
+  --zd-hair-2: #2f333a;
+
+  /* 强调色：默认白，青绿/香槟为两个固定点缀 */
+  --zd-accent: #ffffff;
+  --zd-accent-home: #00f5d4;
+  --zd-accent-shelf: #f4d28a;
+  --zd-tint: #9db8cf;
+  --zd-scrim: rgba(11, 13, 16, 0.55);
+  --zd-danger: #f87171;
+
+  /* 字体：系统中文优先，数字/进度用等宽 */
+  --zd-font-body: "PingFang SC", "Noto Sans SC", "HarmonyOS Sans SC", "Inter",
+    ui-sans-serif, system-ui, sans-serif;
+  --zd-font-mono: "SF Mono", "JetBrains Mono", ui-monospace, SFMono-Regular,
+    Menlo, monospace;
+
+  /* 字号层级 */
+  --zd-text-kicker: 10px;
+  --zd-text-sm: 11px;
+  --zd-text-body: 13px;
+  --zd-text-h1: clamp(34px, 4.6vw, 58px);
+  --zd-text-lyric: clamp(34px, 5.6vw, 76px);
+  --zd-tracking-kicker: 0.18em;
+  --zd-tracking-label: 0.02em;
+
+  /* 圆角 */
+  --zd-radius-hero: 28px;
+  --zd-radius-drawer: 20px;
+  --zd-radius-popover: 18px;
+  --zd-radius-sub: 14px;
+  --zd-radius-cover: 12px;
+  --zd-radius-pill: 999px;
+
+  /* 动效：只对 transform/opacity 做过渡 */
+  --zd-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --zd-dur-1: 0.16s;
+  --zd-dur-2: 0.28s;
+  --zd-dur-3: 0.46s;
+  --zd-dur-4: 0.72s;
+
+  /* 间距与密度 */
+  --zd-space-xs: 4px;
+  --zd-space-sm: 8px;
+  --zd-space-md: 12px;
+  --zd-space-lg: 20px;
+  --zd-space-xl: 32px;
+
+  /* 行高：中文正文放宽，数字展示收紧 */
+  --zd-leading-body: 1.6;
+  --zd-leading-ui: 1.4;
+  --zd-leading-display: 1.14;
+
+  /* 玻璃材质：仅由 .glass-* 与 UI 原子消费，组件内不要另写 rgba */
+  --zd-glass-bg: linear-gradient(
+      112deg,
+      rgba(88, 92, 98, 0.5),
+      rgba(34, 39, 45, 0.68) 46%,
+      rgba(16, 19, 23, 0.76)
+    );
+  --zd-glass-bg-hero: linear-gradient(
+      112deg,
+      rgba(96, 101, 108, 0.66),
+      rgba(40, 45, 52, 0.74) 46%,
+      rgba(17, 21, 25, 0.78)
+    );
+  --zd-glass-bg-float: rgba(22, 26, 31, 0.55);
+  --zd-glass-bg-pill: rgba(255, 255, 255, 0.055);
+  --zd-glass-line: rgba(255, 255, 255, 0.14);
+  --zd-glass-line-strong: rgba(255, 255, 255, 0.24);
+  --zd-glass-fill: rgba(255, 255, 255, 0.07);
+  --zd-glass-fill-hover: rgba(255, 255, 255, 0.12);
+  --zd-glass-sheen: rgba(255, 255, 255, 0.18);
+  --zd-glass-inset-dark: rgba(0, 0, 0, 0.4);
+  --zd-shadow-panel: 0 22px 64px rgba(0, 0, 0, 0.3);
+  --zd-shadow-pill: 0 18px 48px rgba(0, 0, 0, 0.28);
+  --zd-shadow-float: 0 18px 48px rgba(0, 0, 0, 0.34);
+  --zd-shadow-drawer: 0 28px 80px rgba(0, 0, 0, 0.42);
+  --zd-shadow-cover: 0 10px 28px rgba(0, 0, 0, 0.34);
+
+  /* 层级（沿用 Mineradio 的经验值，避免浮层互相压） */
+  --zd-z-stage: 0;
+  --zd-z-home: 4;
+  --zd-z-dock: 6;
+  --zd-z-drawer: 17;
+  --zd-z-search: 22;
+  --zd-z-overlay: 30;
+
+  /* ── 旧组件兼容别名（新组件请勿使用） ── */
+  --color-surface: var(--zd-bg);
+  --color-on-surface: var(--zd-ink);
+  --color-surface-dim: var(--zd-paper);
+  --color-surface-raised: #1a1e24;
+  --color-surface-overlay: #232830;
+  --color-outline: var(--zd-muted);
+  --color-outline-dim: var(--zd-hair-2);
+  --color-primary: var(--zd-accent);
+  --color-primary-dim: #e6e9ec;
+  --color-secondary: var(--zd-accent-home);
+  --color-on-primary: var(--zd-bg);
+  --color-error: var(--zd-danger);
+  --color-on-error: var(--zd-bg);
+  --color-success: #4ade80;
+  --radius-card: var(--zd-radius-drawer);
+  --radius-element: var(--zd-radius-cover);
+  --radius-full: var(--zd-radius-pill);
+  --ease-standard: var(--zd-ease);
+  --ease-emphasized: var(--zd-ease);
+  --dur-short: var(--zd-dur-1);
+  --dur-medium: var(--zd-dur-2);
+  --dur-long: var(--zd-dur-3);
+  --font-body: var(--zd-font-body);
+  --font-display: var(--zd-font-body);
+  --font-heading: var(--zd-font-body);
+  --font-mono: var(--zd-font-mono);
+  --tracking-label: var(--zd-tracking-label);
+}
+
+[data-density="compact"] {
+  --zd-space-md: 8px;
+  --zd-space-lg: 14px;
+  --zd-space-xl: 20px;
+}

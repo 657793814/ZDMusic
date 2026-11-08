@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>AI Depth 推理实测</title>
+<style>
+  body { margin:0; background:#0b0d10; color:#e8f2f5; font:14px/1.6 ui-monospace,Menlo,monospace; padding:24px; }
+  h1 { font-size:16px; color:#00f5d4; }
+  pre { white-space:pre-wrap; background:#11161c; padding:12px; border-radius:8px; }
+</style>
+</head>
+<body>
+<h1>Depth Anything V2 Small · 浏览器实测</h1>
+<pre id="out">running…</pre>
+<script type="importmap">
+{
+  "imports": {
+    "onnxruntime-web/webgpu": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.0-dev.20260914-8d85527a0/dist/ort.webgpu.min.mjs",
+    "onnxruntime-common": "https://cdn.jsdelivr.net/npm/onnxruntime-common@1.31.1/dist/esm/index.js"
+  }
+}
+</script>
+<script type="module">
+const params = new URLSearchParams(location.search);
+const MODEL = params.get('m') || 'depth-anything-small-hf';
+const LABEL = params.get('label') || MODEL;
+const DEVICE = params.get('device') || 'wasm';
+const DTYPE = params.get('dtype') || 'q8';
+const LIB = params.get('lib') || '/visual/ai-depth/vendor/transformers.min.js';
+
+const out = document.getElementById('out');
+const results = { label: LABEL, device: DEVICE, dtype: DTYPE, runs: [], errors: [] };
+window.__benchResults = results;
+let text = '';
+function log(line) { text += '\n' + line; out.textContent = text; console.log(line); }
+function fail(e) { results.errors.push(String(e && e.stack || e)); log('ERROR: ' + e); }
+window.addEventListener('error', e => fail(e.message));
+window.addEventListener('unhandledrejection', e => fail(e.reason));
+
+function makeInput(size) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, '#1b2735'); grad.addColorStop(1, '#f4d28a');
+  g.fillStyle = grad; g.fillRect(0, 0, size, size);
+  g.fillStyle = '#00f5d4';
+  g.beginPath(); g.arc(size * .5, size * .45, size * .28, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#cb6c89'; g.fillRect(size * .1, size * .75, size * .8, size * .15);
+  return c;
+}
+
+const toMs = v => Math.round(v);
+function stats(arr) {
+  const s = [...arr].sort((a, b) => a - b);
+  return { min: toMs(s[0]), median: toMs(s[Math.floor(s.length / 2)]), max: toMs(s[s.length - 1]), all: arr.map(toMs) };
+}
+
+try {
+  const mod = await import(LIB);
+  const env = mod.env;
+  env.allowRemoteModels = false;
+  env.allowLocalModels = true;
+  env.localModelPath = '/visual/ai-depth/models/';
+  if (env.backends && env.backends.onnx && env.backends.onnx.wasm) {
+    env.backends.onnx.wasm.numThreads = 1;
+    if (params.get('localwasm') === '1') env.backends.onnx.wasm.wasmPaths = '/visual/ai-depth/vendor/';
+  }
+  const input = makeInput(640).toDataURL('image/jpeg', 0.82);
+
+  const t0 = performance.now();
+  const opts = { device: DEVICE, dtype: DTYPE };
+  if (DTYPE === 'q8') opts.quantized = true;
+  const pipe = await mod.pipeline('depth-estimation', MODEL, opts);
+  const tLoad = performance.now() - t0;
+  log(`[${LABEL}] 加载+会话初始化: ${toMs(tLoad)} ms (device=${DEVICE}, dtype=${DTYPE})`);
+
+  const times = [];
+  let shape = null;
+  for (let i = 0; i < 5; i++) {
+    const t = performance.now();
+    const res = await pipe(input);
+    times.push(performance.now() - t);
+    const d = res && (res.depth || res.predicted_depth);
+    shape = d ? `${d.width || '?'}x${d.height || '?'}` : 'no-depth';
+    log(`[${LABEL}] 第 ${i + 1} 次: ${toMs(times[i])} ms depth=${shape}`);
+    await new Promise(r => setTimeout(r, 800));
+  }
+  results.tLoad = toMs(tLoad);
+  results.infer = stats(times);
+  results.depthShape = shape;
+
+  results.resources = performance.getEntriesByType('resource')
+    .filter(r => /\.(wasm|onnx|json)$/.test(r.name))
+    .map(r => ({ name: r.name.split('/').slice(-2).join('/'), MB: +(((r.transferSize || 0) / 1048576).toFixed(2)), ms: Math.round(r.duration) }));
+  results.ready = true;
+  log('\n统计: ' + JSON.stringify(results.infer));
+  log('资源: ' + JSON.stringify(results.resources));
+  log('READY');
+} catch (e) {
+  fail(e);
+  results.ready = true;
+}
+</script>
+</body>
+</html>

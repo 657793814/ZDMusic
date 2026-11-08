@@ -40,7 +40,7 @@ export async function GET() {
 
 ### 1.4 创建加载页
 
-`dist/index.html` — 开发模式 WebView 启动时的过渡页，自动跳转到 `http://localhost:3000`
+`dist/index.html` — 开发模式 WebView 启动时的过渡页，自动跳转到 `http://localhost:3978`
 
 ### 1.5 CSP 策略
 
@@ -69,8 +69,8 @@ npm run tauri:dev    # 启动 WebView + Next.js dev server
 Rust `setup` 闭包中：
 1. 等待 1s 窗口初始化
 2. `start_server_sync` 从资源目录启动 `standalone/server.js`
-3. 每 500ms 轮询 TCP 3000（最多 30s）
-4. WebView 导航到 `http://localhost:3000`
+3. 每 500ms 轮询 TCP 3978（最多 30s）
+4. WebView 导航到 `http://localhost:3978`
 
 退出时 `on_window_event(Destroyed)` + `RunEvent::Exit` 双重清理子进程。
 

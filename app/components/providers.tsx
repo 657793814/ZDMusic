@@ -2,7 +2,7 @@
 
 import { AgentProvider } from "@/app/context/AgentContext";
 import { DanmakuProvider } from "@/app/context/DanmakuContext";
-import { ModeProvider } from "@/app/context/ModeContext";
+import { DownloadProvider } from "@/app/context/DownloadContext";
 import { PlayerProvider } from "@/app/context/PlayerContext";
 import { ThemeProvider } from "@/app/context/ThemeContext";
 import { I18nProvider, useI18n } from "@/app/lib/i18n";
@@ -21,16 +21,16 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <I18nProvider>
       <ThemeProvider>
-        <ModeProvider>
-          <PlayerProvider>
-            <DanmakuProvider>
-              <AgentProvider>
+        <PlayerProvider>
+          <DanmakuProvider>
+            <AgentProvider>
+              <DownloadProvider>
                 <LangHydrator />
                 {children}
-              </AgentProvider>
-            </DanmakuProvider>
-          </PlayerProvider>
-        </ModeProvider>
+              </DownloadProvider>
+            </AgentProvider>
+          </DanmakuProvider>
+        </PlayerProvider>
       </ThemeProvider>
     </I18nProvider>
   );

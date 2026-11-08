@@ -46,7 +46,9 @@ try {
   execSync("npm prune --production --no-audit --no-fund --loglevel=error", {
     cwd: standalone,
     stdio: "pipe",
-    timeout: 60_000,
+    // prune 需要递归比对整棵依赖树，冷启动时常超过 1 分钟；给足余量避免
+    // 超时后被跳过，导致 devDependencies 被打进 .app（体积多出约 80MB）。
+    timeout: 300_000,
     shell: "/bin/bash",
   });
   console.log("✓ devDependencies pruned");

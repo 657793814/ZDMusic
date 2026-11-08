@@ -151,7 +151,7 @@ cmd.env("PATH", &app_path);
   "identifier": "com.zdmusic",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:3000",
+    "devUrl": "http://localhost:3978",
     "beforeDevCommand": "unset npm_config_prefix && ... nvm use 22.22.3 && npm run dev",
     "beforeBuildCommand": "unset npm_config_prefix && ... nvm use 22.22.3 && npm run build && node scripts/prepare-standalone.mjs"
   }
@@ -185,8 +185,8 @@ cmd.env("PATH", &app_path);
 在 Rust `setup` 闭包中（仅 release 模式）：
 1. 1s 延时等窗口初始化
 2. `start_server_sync` 启动 `standalone/server.js`
-3. 轮询 TCP 3000 端口（500ms 间隔，最多 30s）
-4. 成功后 WebView 导航到 `http://localhost:3000`
+3. 轮询 TCP 3978 端口（500ms 间隔，最多 30s）
+4. 成功后 WebView 导航到 `http://localhost:3978`
 
 ### 2.3 Standalone 资源打包
 

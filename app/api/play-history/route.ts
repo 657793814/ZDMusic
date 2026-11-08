@@ -6,6 +6,7 @@ import {
   getRecentTrackIds,
   getFrequentTrackIds,
 } from "@/app/lib/play-history";
+import { getListenSummary } from "@/app/lib/listen-stats";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    case "summary": {
+      return NextResponse.json({ action: "summary", ...getListenSummary() });
+    }
+
     case "all": {
       const history = readHistory();
       return NextResponse.json({
@@ -67,13 +72,17 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { trackId?: string; completed?: boolean };
+    const body = (await request.json()) as {
+      trackId?: string;
+      completed?: boolean;
+      duration?: number;
+    };
 
     if (!body.trackId || typeof body.trackId !== "string") {
       return NextResponse.json({ error: "Missing or invalid trackId" }, { status: 400 });
     }
 
-    recordPlay(body.trackId, body.completed === true);
+    recordPlay(body.trackId, body.completed === true, body.duration);
 
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -1,0 +1,298 @@
+/* ─── 玻璃材质与设计系统原子 ───
+ * 组件内部禁止再写 backdrop-filter；只允许 glass-panel / glass-hero /
+ * glass-pill / glass-popover / glass-drawer 五个材质类使用。
+ */
+
+/* 卡片 / 面板：中性玻璃，不抢封面 */
+.glass-panel {
+  background: var(--zd-glass-bg);
+  border: 1px solid var(--zd-glass-line);
+  box-shadow:
+    var(--zd-shadow-panel),
+    inset 0 1px 0 var(--zd-glass-line-strong);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+/* 首屏大卡 / 聚焦卡片：强调色发丝边，跟随设置里的 accent 切换 */
+.glass-hero {
+  background: var(--zd-glass-bg-hero);
+  border: 1px solid color-mix(in srgb, var(--zd-accent-home) 34%, transparent);
+  box-shadow:
+    var(--zd-shadow-panel),
+    inset 0 1px 0 var(--zd-glass-line-strong);
+  backdrop-filter: blur(22px) saturate(1.5);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+}
+
+/* 底部胶囊控制条 */
+.glass-pill {
+  background: var(--zd-glass-bg-pill);
+  border: 1px solid color-mix(in srgb, var(--zd-ink) 11%, transparent);
+  box-shadow:
+    var(--zd-shadow-pill),
+    inset 0 1px 0 color-mix(in srgb, var(--zd-ink) 14%, transparent),
+    inset 0 -1px 0 var(--zd-glass-inset-dark);
+  backdrop-filter: blur(12px) saturate(1.8) brightness(1.16);
+  -webkit-backdrop-filter: blur(12px) saturate(1.8) brightness(1.16);
+}
+
+/* 底部控制条专用材质：亮背景优先可读性，保留玻璃质感但加实底比例 */
+.glass-dock {
+  background:
+    linear-gradient(180deg, rgba(21, 26, 34, 0.93) 0%, rgba(9, 12, 17, 0.96) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow:
+    0 20px 54px rgba(0, 0, 0, 0.56),
+    0 2px 10px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(28px) saturate(1.35) brightness(0.92);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35) brightness(0.92);
+}
+
+/* Popover */
+.glass-popover {
+  background: var(--zd-glass-bg-float);
+  border: 1px solid color-mix(in srgb, var(--zd-ink) 10%, transparent);
+  border-radius: var(--zd-radius-popover);
+  box-shadow:
+    var(--zd-shadow-float),
+    inset 0 1px 0 color-mix(in srgb, var(--zd-ink) 10%, transparent);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+}
+
+/* 抽屉 / Sheet */
+.glass-drawer {
+  background: var(--zd-glass-bg-float);
+  border: 1px solid var(--zd-glass-line);
+  box-shadow:
+    var(--zd-shadow-drawer),
+    inset 0 1px 0 color-mix(in srgb, var(--zd-ink) 10%, transparent);
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
+}
+
+/* 浮层可读性兜底：亮封面下也能读 */
+.zd-scrim {
+  background: var(--zd-scrim);
+}
+
+/* ── UI 原子 ── */
+
+/* 图标按钮 34×34 */
+.zd-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: var(--zd-radius-sub);
+  border: 1px solid var(--zd-glass-line);
+  background: var(--zd-glass-fill);
+  color: var(--zd-ink-2);
+  cursor: pointer;
+  transition:
+    transform var(--zd-dur-1) var(--zd-ease),
+    background-color var(--zd-dur-1) var(--zd-ease),
+    color var(--zd-dur-1) var(--zd-ease),
+    border-color var(--zd-dur-1) var(--zd-ease);
+}
+
+.zd-icon-btn:hover {
+  background: var(--zd-glass-fill-hover);
+  color: var(--zd-ink);
+  transform: translateY(-1px);
+}
+
+.zd-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.zd-icon-btn:focus-visible {
+  outline: 2px solid var(--zd-accent-home);
+  outline-offset: 2px;
+}
+
+.zd-icon-btn[data-active="true"] {
+  color: var(--zd-accent-home);
+  border-color: color-mix(in srgb, var(--zd-accent-home) 46%, transparent);
+  background: color-mix(in srgb, var(--zd-accent-home) 13%, transparent);
+}
+
+/* Chip */
+.zd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--zd-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--zd-ink) 11%, transparent);
+  background: color-mix(in srgb, var(--zd-ink) 6%, transparent);
+  color: var(--zd-muted);
+  font-family: var(--zd-font-body);
+  font-size: var(--zd-text-sm);
+  letter-spacing: var(--zd-tracking-label);
+  line-height: var(--zd-leading-ui);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--zd-dur-1) var(--zd-ease),
+    background-color var(--zd-dur-1) var(--zd-ease),
+    border-color var(--zd-dur-1) var(--zd-ease);
+}
+
+.zd-chip:hover {
+  color: var(--zd-ink);
+  background: color-mix(in srgb, var(--zd-ink) 10%, transparent);
+}
+
+.zd-settings-chip-hint {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--zd-muted);
+  opacity: 0.75;
+}
+
+.zd-chip[data-active="true"] {
+  color: var(--zd-accent-home);
+  border-color: color-mix(in srgb, var(--zd-accent-home) 46%, transparent);
+  background: color-mix(in srgb, var(--zd-accent-home) 14%, transparent);
+}
+
+.zd-chip:focus-visible {
+  outline: 2px solid var(--zd-accent-home);
+  outline-offset: 2px;
+}
+
+/* Slider */
+.zd-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--zd-radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--zd-accent) 0%,
+    var(--zd-accent) var(--fill, 0%),
+    var(--zd-glass-sheen) var(--fill, 0%),
+    var(--zd-glass-sheen) 100%
+  );
+  cursor: pointer;
+  outline: none;
+}
+
+.zd-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--zd-ink);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--zd-ink) 8%, transparent);
+  transition: transform var(--zd-dur-1) var(--zd-ease);
+}
+
+.zd-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+.zd-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--zd-accent-home) 24%, transparent);
+}
+
+/* Popover 容器 */
+.zd-popover {
+  position: absolute;
+  z-index: var(--zd-z-overlay);
+  min-width: 236px;
+  padding: 12px;
+  animation: zd-pop-in var(--zd-dur-2) var(--zd-ease);
+}
+
+/* Sheet */
+.zd-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--zd-z-overlay);
+  background: var(--zd-scrim);
+  animation: zd-fade-in var(--zd-dur-2) var(--zd-ease);
+}
+
+.zd-sheet {
+  position: fixed;
+  z-index: calc(var(--zd-z-overlay) + 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: zd-sheet-in var(--zd-dur-3) var(--zd-ease);
+}
+
+.zd-sheet[data-side="right"] {
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: min(420px, 92vw);
+  border-radius: var(--zd-radius-drawer);
+}
+
+.zd-sheet[data-side="left"] {
+  top: 12px;
+  left: 12px;
+  bottom: 12px;
+  width: min(360px, 92vw);
+  border-radius: var(--zd-radius-drawer);
+}
+
+.zd-sheet[data-side="bottom"] {
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  max-height: min(560px, 80dvh);
+  border-radius: var(--zd-radius-drawer);
+}
+
+@keyframes zd-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zd-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes zd-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zd-popover,
+  .zd-sheet,
+  .zd-sheet-backdrop {
+    animation: none;
+  }
+}
