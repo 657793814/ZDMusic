@@ -1,9 +1,14 @@
 /* ─── P2 Home 首屏 ─── */
 
+/* 首页是独立滚动容器。
+ * 不要复用 .zd-view 的 flex 居中：WebKit 对「flex 容器自身滚动」的处理和 Chrome 有差异，
+ * 这里用普通块级容器 + 显式高度，保证 WKWebView 里一定可上下滚。 */
 .zd-home-view {
-  align-items: flex-start;
-  justify-content: flex-start;
+  display: block;
+  height: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: clamp(24px, 4vw, 52px) clamp(20px, 5vw, 72px) 128px;
 }
 

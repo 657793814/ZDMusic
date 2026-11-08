@@ -49,9 +49,16 @@
   transition: opacity var(--zd-dur-3) var(--zd-ease);
 }
 
+/* 非激活视图淡出后彻底退出命中测试。
+ * opacity:0 的元素仍可被点中（子元素只要 pointer-events:auto 就会接住滚轮/点击），
+ * 舞台层的 canvas / 封面卡会在回到 Home 后继续吃事件，导致首页滚不动。 */
 .zd-view[data-active="false"] {
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity var(--zd-dur-3) var(--zd-ease),
+    visibility 0s linear var(--zd-dur-3);
 }
 
 /* Home 空态（旧版兜底，HomeView 已改用 home.css） */
