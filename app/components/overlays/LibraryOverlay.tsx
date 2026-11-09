@@ -136,7 +136,8 @@ export function LibraryOverlay() {
         const res = await fetch("/api/library/rescan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode, id }),
+          // silent = 打开面板时后台补标签，不能顺带把用户「从曲库移除」的歌恢复
+          body: JSON.stringify({ mode, id, keepHidden: silent }),
         });
         if (!res.ok) throw new Error(`发起重扫失败（${res.status}）`);
         const { jobId } = (await res.json()) as { jobId?: string };
@@ -362,7 +363,8 @@ export function LibraryOverlay() {
     try {
       const res = await fetch("/api/playlists", { cache: "no-store" });
       const data = res.ok ? ((await res.json()) as { playlists?: Playlist[] }) : { playlists: [] };
-      setPickPlaylists(data.playlists ?? []);
+      // 「全部歌单」是曲库实时派生出来的系统歌单，不能往里加歌
+      setPickPlaylists((data.playlists ?? []).filter((playlist) => !playlist.system));
     } catch {
       setPickPlaylists([]);
     }

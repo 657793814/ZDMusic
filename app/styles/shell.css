@@ -61,6 +61,14 @@
     visibility 0s linear var(--zd-dur-3);
 }
 
+/* WKWebView 里仅靠 visibility/pointer-events 仍不够：隐藏的全屏舞台层
+ * 还会参与原生滚轮的路由，从舞台返回首页后滚轮被它吞掉，Home 无法上下滚动。
+ * 非激活时直接 display:none，把它从布局和滚动链路里摘掉；激活时再由
+ * ResizeObserver 重新测量 canvas，不会影响舞台尺寸。 */
+.zd-stage-view[data-active="false"] {
+  display: none;
+}
+
 /* Home 空态（旧版兜底，HomeView 已改用 home.css） */
 .zd-kicker {
   font-size: var(--zd-text-kicker);

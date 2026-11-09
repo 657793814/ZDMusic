@@ -237,7 +237,7 @@ export function PlayerDock({
           </IconButton>
 
           <IconButton
-            label="播放队列"
+            label="队列与歌单"
             onClick={() => open("queue")}
             active={active === "queue"}
           >

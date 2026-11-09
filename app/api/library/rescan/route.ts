@@ -4,9 +4,9 @@ import { getRescanJob, startRescan, type RescanMode } from "@/app/lib/library-jo
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  let body: { mode?: RescanMode; id?: string } = {};
+  let body: { mode?: RescanMode; id?: string; keepHidden?: boolean } = {};
   try {
-    body = (await request.json()) as { mode?: RescanMode; id?: string };
+    body = (await request.json()) as { mode?: RescanMode; id?: string; keepHidden?: boolean };
   } catch {
     return NextResponse.json({ error: "请求体不是合法 JSON" }, { status: 400 });
   }
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "mode 必须是 all 或 single" }, { status: 400 });
   }
 
-  const job = startRescan(body.mode, body.id);
+  const job = startRescan(body.mode, body.id, body.keepHidden === true);
   return NextResponse.json({ jobId: job.id });
 }
 

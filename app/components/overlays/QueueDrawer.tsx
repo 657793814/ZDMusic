@@ -26,7 +26,7 @@ export function QueueDrawer() {
   const { active, queueTab, close } = useOverlay();
   const queue = useQueue();
   const playback = usePlayback();
-  const { getTrack } = useLibrary();
+  const { getTrack, tracks: libraryTracks } = useLibrary();
 
   const [hovered, setHovered] = useState(false);
   const [pinned, setPinned] = useState(false);
@@ -79,9 +79,10 @@ export function QueueDrawer() {
 
   useEffect(() => () => clearCloseTimer(), [clearCloseTimer]);
 
-  // 打开歌单 tab 时懒加载
+  // 打开歌单 tab 时加载；曲库数量变化（重扫/删除）时同步刷新，
+  // 让「全部歌单」的内容和计数跟着扫描结果走
   useEffect(() => {
-    if (!visible || tab !== "playlists" || playlists !== null) return;
+    if (!visible || tab !== "playlists") return;
     let alive = true;
     fetch("/api/playlists", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : { playlists: [] }))
@@ -94,7 +95,7 @@ export function QueueDrawer() {
     return () => {
       alive = false;
     };
-  }, [visible, tab, playlists]);
+  }, [visible, tab, libraryTracks.length]);
 
   const handleClose = useCallback(() => {
     setPinned(false);
@@ -142,6 +143,21 @@ export function QueueDrawer() {
     const timer = setTimeout(() => setNotice(null), 3000);
     return () => clearTimeout(timer);
   }, [notice]);
+
+  const enqueueAllSongs = useCallback(
+    (playlist: Playlist) => {
+      const resolved = playlist.trackIds
+        .map((id) => getTrack(id))
+        .filter((track): track is NonNullable<typeof track> => track !== null);
+      if (!resolved.length) {
+        setNotice("曲库为空");
+        return;
+      }
+      queue.enqueue(resolved, "playlist");
+      setNotice(`已把全部 ${resolved.length} 首加入队列`);
+    },
+    [getTrack, queue]
+  );
 
   const handlePlayPlaylist = useCallback(
     (playlist: Playlist) => {
@@ -319,7 +335,7 @@ export function QueueDrawer() {
         data-open={visible ? "true" : "false"}
         data-pinned={pinned || activeOpen ? "true" : "false"}
         aria-hidden={!visible}
-        aria-label="播放队列"
+        aria-label="队列与歌单"
         onPointerEnter={() => {
           clearCloseTimer();
           setHovered(true);
@@ -330,7 +346,7 @@ export function QueueDrawer() {
           <div className="zd-queue-head-title">
             <span className="zd-kicker">QUEUE</span>
             <div className="zd-queue-title-row">
-              <span className="zd-queue-title">播放队列</span>
+              <span className="zd-queue-title">队列与歌单</span>
               <span className="zd-queue-count">{queue.queue.length}</span>
             </div>
           </div>
@@ -571,7 +587,7 @@ export function QueueDrawer() {
                     }}
                   >
                     <ArrowLeftIcon size={12} />
-                    全部歌单
+                    返回歌单列表
                   </button>
                   <span className="zd-playlist-detail-actions">
                     <IconButton
@@ -582,22 +598,26 @@ export function QueueDrawer() {
                     >
                       <PlayIcon size={12} />
                     </IconButton>
-                    <IconButton
-                      label="重命名"
-                      size={28}
-                      disabled={busy}
-                      onClick={() => openRename(activePlaylist)}
-                    >
-                      <EditIcon size={12} />
-                    </IconButton>
-                    <IconButton
-                      label="删除歌单"
-                      size={28}
-                      disabled={busy}
-                      onClick={() => setConfirmDelete(activePlaylist.id)}
-                    >
-                      <TrashIcon size={12} />
-                    </IconButton>
+                    {activePlaylist.system ? null : (
+                      <>
+                        <IconButton
+                          label="重命名"
+                          size={28}
+                          disabled={busy}
+                          onClick={() => openRename(activePlaylist)}
+                        >
+                          <EditIcon size={12} />
+                        </IconButton>
+                        <IconButton
+                          label="删除歌单"
+                          size={28}
+                          disabled={busy}
+                          onClick={() => setConfirmDelete(activePlaylist.id)}
+                        >
+                          <TrashIcon size={12} />
+                        </IconButton>
+                      </>
+                    )}
                   </span>
                 </div>
 
@@ -633,20 +653,34 @@ export function QueueDrawer() {
                 ) : null}
 
                 <div className="zd-playlist-detail-actions">
-                  <button
-                    type="button"
-                    className="zd-chip"
-                    disabled={busy || queue.queue.length === 0}
-                    onClick={() => void addQueueToPlaylist(activePlaylist)}
-                  >
-                    <PlusIcon size={12} />
-                    加入当前队列（{queue.queue.length}）
-                  </button>
+                  {activePlaylist.system ? (
+                    <button
+                      type="button"
+                      className="zd-chip"
+                      disabled={busy || activePlaylist.trackIds.length === 0}
+                      onClick={() => enqueueAllSongs(activePlaylist)}
+                    >
+                      <PlusIcon size={12} />
+                      全部加入队列（{activePlaylist.trackIds.length}）
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="zd-chip"
+                      disabled={busy || queue.queue.length === 0}
+                      onClick={() => void addQueueToPlaylist(activePlaylist)}
+                    >
+                      <PlusIcon size={12} />
+                      加入当前队列（{queue.queue.length}）
+                    </button>
+                  )}
                 </div>
 
                 {activePlaylist.trackIds.length === 0 ? (
                   <div className="zd-empty">
-                    这个歌单还是空的。点上方「加入当前队列」，或在曲库里多选后加入。
+                    {activePlaylist.system
+                      ? "曲库还是空的。扫描到本地歌曲后这里会自动出现。"
+                      : "这个歌单还是空的。点上方「加入当前队列」，或在曲库里多选后加入。"}
                   </div>
                 ) : (
                   activePlaylist.trackIds.map((trackId, index) => {
@@ -662,32 +696,34 @@ export function QueueDrawer() {
                             {track ? track.author || track.subDir : trackId}
                           </span>
                         </span>
-                        <span className="zd-queue-row-actions">
-                          <IconButton
-                            label="上移"
-                            size={26}
-                            disabled={busy || index === 0}
-                            onClick={() => void movePlaylistTrack(activePlaylist, index, -1)}
-                          >
-                            ↑
-                          </IconButton>
-                          <IconButton
-                            label="下移"
-                            size={26}
-                            disabled={busy || index === activePlaylist.trackIds.length - 1}
-                            onClick={() => void movePlaylistTrack(activePlaylist, index, 1)}
-                          >
-                            ↓
-                          </IconButton>
-                          <IconButton
-                            label="从歌单移除"
-                            size={26}
-                            disabled={busy}
-                            onClick={() => void removePlaylistTrack(activePlaylist, trackId)}
-                          >
-                            <TrashIcon size={12} />
-                          </IconButton>
-                        </span>
+                        {activePlaylist.system ? null : (
+                          <span className="zd-queue-row-actions">
+                            <IconButton
+                              label="上移"
+                              size={26}
+                              disabled={busy || index === 0}
+                              onClick={() => void movePlaylistTrack(activePlaylist, index, -1)}
+                            >
+                              ↑
+                            </IconButton>
+                            <IconButton
+                              label="下移"
+                              size={26}
+                              disabled={busy || index === activePlaylist.trackIds.length - 1}
+                              onClick={() => void movePlaylistTrack(activePlaylist, index, 1)}
+                            >
+                              ↓
+                            </IconButton>
+                            <IconButton
+                              label="从歌单移除"
+                              size={26}
+                              disabled={busy}
+                              onClick={() => void removePlaylistTrack(activePlaylist, trackId)}
+                            >
+                              <TrashIcon size={12} />
+                            </IconButton>
+                          </span>
+                        )}
                       </div>
                     );
                   })
@@ -720,6 +756,7 @@ export function QueueDrawer() {
                   <span className="zd-queue-meta">
                     <span className="zd-queue-name">{playlist.name}</span>
                     <span className="zd-queue-sub">
+                      {playlist.system ? "系统 · " : ""}
                       {playlist.trackIds.length} 首
                       {playlist.description ? ` · ${playlist.description}` : ""}
                     </span>
@@ -735,27 +772,31 @@ export function QueueDrawer() {
                     >
                       <PlayIcon size={12} />
                     </IconButton>
-                    <IconButton
-                      label="重命名"
-                      size={26}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openRename(playlist);
-                      }}
-                    >
-                      <EditIcon size={12} />
-                    </IconButton>
-                    <IconButton
-                      label="删除歌单"
-                      size={26}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setViewPlaylistId(playlist.id);
-                        setConfirmDelete(playlist.id);
-                      }}
-                    >
-                      <TrashIcon size={12} />
-                    </IconButton>
+                    {playlist.system ? null : (
+                      <>
+                        <IconButton
+                          label="重命名"
+                          size={26}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openRename(playlist);
+                          }}
+                        >
+                          <EditIcon size={12} />
+                        </IconButton>
+                        <IconButton
+                          label="删除歌单"
+                          size={26}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setViewPlaylistId(playlist.id);
+                            setConfirmDelete(playlist.id);
+                          }}
+                        >
+                          <TrashIcon size={12} />
+                        </IconButton>
+                      </>
+                    )}
                   </span>
                 </div>
               ))

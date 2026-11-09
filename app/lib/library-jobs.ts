@@ -52,9 +52,9 @@ export function getRescanJob(id: string): RescanJob | null {
   return jobs.get(id) ?? null;
 }
 
-export function startRescan(mode: RescanMode, targetId?: string): RescanJob {
+export function startRescan(mode: RescanMode, targetId?: string, keepHidden = false): RescanJob {
   const job = createJob(mode);
-  void runRescan(job, targetId);
+  void runRescan(job, targetId, keepHidden);
   return job;
 }
 
@@ -62,7 +62,7 @@ function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-async function runRescan(job: RescanJob, targetId?: string): Promise<void> {
+async function runRescan(job: RescanJob, targetId?: string, keepHidden = false): Promise<void> {
   try {
     const files = await scanFiles();
     const state = readLibraryState();
@@ -84,8 +84,9 @@ async function runRescan(job: RescanJob, targetId?: string): Promise<void> {
         job.message = "文件已不存在";
       }
     } else {
-      // 整库重扫：清空 hidden，让「从曲库移除」的歌回到列表
-      state.hidden = [];
+      // 整库重扫：默认清空 hidden，让「从曲库移除」的歌回到列表。
+      // keepHidden 用于打开面板时的后台补标签：静默任务不能把用户删掉的歌悄悄加回来。
+      if (!keepHidden) state.hidden = [];
       const now = Date.now();
       for (const [id, entry] of Object.entries(state.entries)) {
         if (currentIds.has(id)) continue;

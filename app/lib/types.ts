@@ -81,7 +81,12 @@ export interface Playlist {
   trackIds: string[];
   createdAt: number;
   updatedAt: number;
+  /** 系统伪歌单（如「全部歌单」）：不落库，内容由曲库实时派生，不可改名/删除 */
+  system?: boolean;
 }
+
+/** 系统伪歌单的保留 id，不会写进 playlists.json */
+export const ALL_SONGS_PLAYLIST_ID = "__all__";
 
 export interface PlaylistStore {
   playlists: Playlist[];

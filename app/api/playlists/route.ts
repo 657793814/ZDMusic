@@ -5,17 +5,34 @@ import {
   generatePlaylistId,
   now,
 } from "@/app/lib/playlists-store";
-import type { Playlist } from "@/app/lib/types";
+import { scanTracks } from "@/app/lib/tracks";
+import { ALL_SONGS_PLAYLIST_ID, type Playlist } from "@/app/lib/types";
 
 export const dynamic = "force-dynamic";
 
+/** 系统伪歌单：不写进 playlists.json，内容每次由曲库扫描实时派生 */
+async function buildAllSongsPlaylist(): Promise<Playlist> {
+  const tracks = await scanTracks();
+  return {
+    id: ALL_SONGS_PLAYLIST_ID,
+    name: "全部歌单",
+    nameEn: "All Songs",
+    description: "曲库里所有歌曲，随扫描自动更新",
+    trackIds: tracks.map((track) => track.id),
+    createdAt: 0,
+    updatedAt: 0,
+    system: true,
+  };
+}
+
 /**
  * GET /api/playlists
- * Returns all playlists.
+ * Returns all playlists（第一项为只读的「全部歌单」）。
  */
 export async function GET() {
   const store = getPlaylists();
-  return NextResponse.json(store);
+  const all = await buildAllSongsPlaylist();
+  return NextResponse.json({ playlists: [all, ...store.playlists] });
 }
 
 /**
@@ -32,6 +49,10 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as Record<string, unknown>;
     const store = getPlaylists();
     const action = body.action as string;
+
+    if (body.id === ALL_SONGS_PLAYLIST_ID) {
+      return NextResponse.json({ error: "「全部歌单」是系统歌单，不能修改" }, { status: 400 });
+    }
 
     switch (action) {
       case "create": {
@@ -139,6 +160,9 @@ export async function DELETE(request: NextRequest) {
     const id = request.nextUrl.searchParams.get("id");
     if (!id) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
+    if (id === ALL_SONGS_PLAYLIST_ID) {
+      return NextResponse.json({ error: "「全部歌单」是系统歌单，不能删除" }, { status: 400 });
     }
     const store = getPlaylists();
     const idx = store.playlists.findIndex((p) => p.id === id);

@@ -55,32 +55,38 @@ export function parseName(name: string): { title: string; author: string; date: 
 
 export type RawTrack = Track & { mtimeMs: number; birthtimeMs: number };
 
-/** 只做磁盘扫描，不读曲库状态；管理端用它做重扫统计。 */
+/** 目录递归深度上限，避免异常深目录拖垮扫描 */
+const MAX_SCAN_DEPTH = 6;
+
+/**
+ * 只做磁盘扫描，不读曲库状态；管理端用它做重扫统计。
+ * 递归扫描：根目录直接放的 mp3、以及多层子目录都会收录（之前只扫一层，
+ * 直接把文件丢进音乐目录时「重新扫描」什么都扫不到）。
+ */
 export async function scanFiles(): Promise<RawTrack[]> {
   const tracks: RawTrack[] = [];
 
-  let dirs;
-  try {
-    dirs = await readdir(MUSIC_DIR, { withFileTypes: true });
-  } catch {
-    return tracks;
-  }
-
-  for (const dir of dirs) {
-    if (!dir.isDirectory()) continue;
-    const subDir = dir.name;
-
-    let files;
+  const walk = async (relDir: string, depth: number): Promise<void> => {
+    let entries;
     try {
-      files = await readdir(path.join(MUSIC_DIR, subDir), { withFileTypes: true });
+      entries = await readdir(relDir ? path.join(MUSIC_DIR, relDir) : MUSIC_DIR, {
+        withFileTypes: true,
+      });
     } catch {
-      continue;
+      return;
     }
 
-    for (const f of files) {
-      if (f.isDirectory() || !f.name.toLowerCase().endsWith(".mp3")) continue;
+    for (const f of entries) {
+      if (f.name.startsWith(".")) continue;
+      const rel = relDir ? `${relDir}/${f.name}` : f.name;
 
-      const filePath = path.join(MUSIC_DIR, subDir, f.name);
+      if (f.isDirectory()) {
+        if (depth < MAX_SCAN_DEPTH) await walk(rel, depth + 1);
+        continue;
+      }
+      if (!f.name.toLowerCase().endsWith(".mp3")) continue;
+
+      const filePath = path.join(MUSIC_DIR, rel);
       let size = 0;
       let mtimeMs = 0;
       let birthtimeMs = 0;
@@ -97,22 +103,23 @@ export async function scanFiles(): Promise<RawTrack[]> {
       const { title, author, date, bvid } = parseName(baseName);
 
       tracks.push({
-        id: `${subDir}/${f.name}`,
+        id: rel,
         title,
         author,
         date,
         filename: f.name,
-        subDir,
+        subDir: relDir,
         size,
         mtimeMs,
         birthtimeMs,
         ...(bvid ? { bvid } : {}),
-        url: `/api/tracks/${encodeURIComponent(subDir)}/${encodeURIComponent(f.name)}`,
+        url: `/api/tracks/${rel.split("/").map(encodeURIComponent).join("/")}`,
       });
     }
-  }
+  };
 
-  return tracks;
+  await walk("", 0);
+  return tracks.sort((a, b) => a.id.localeCompare(b.id, "zh-CN"));
 }
 
 /** 把曲库状态（本地覆盖 / 入库时间 / 时长缓存）叠加到扫描结果上 */
