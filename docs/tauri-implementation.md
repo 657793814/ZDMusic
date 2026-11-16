@@ -320,7 +320,7 @@ Rust `build_server_command()` 注入：
 |------|------|------|
 | 开发模式 | `npm run tauri:dev` | — |
 | 原生二进制 | `src-tauri/target/release/zdmusic` | ~5 MB |
-| **.app 包** | `target/release/bundle/macos/卓动悦听.app` | **~100 MB** |
+| .app 中间产物 | `target/release/bundle/.staging/卓动悦听.app` | **~100 MB** |
 | **.dmg 安装包** | `target/release/bundle/dmg/卓动悦听_0.1.0_aarch64.dmg` | **~64 MB** |
 
 > ⚠️ 体积比之前大是因为 bv2mp3 + 传递依赖 (~300MB node_modules) 被包含在 standalone 中，压缩后增量约 46MB。

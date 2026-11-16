@@ -22,3 +22,14 @@ AI 当前生效配置（2026-08 确认可用）：
 - `ANTHROPIC_API_KEY=sk-P3MJiF...`（见 `~/.zdmusic/config.json`）
 
 若设置界面显示旧值，检查 `~/.zdmusic/config.json` 是否已同步，并 POST `/api/config/reload` 清缓存。
+
+## 打包注意：中间 .app 不要留在 bundle/macos/
+
+`scripts/build.sh` 把 Tauri 产出的 `.app` 立刻移到隐藏的
+`src-tauri/target/release/bundle/.staging/` 再压 DMG。原因是 macOS 会把
+`bundle/macos/` 里的 `.app` 注册进 LaunchServices，Launchpad 于是多出一个
+点了跳到源码目录的假「卓动悦听」图标（`/Applications` 下才是真装的）。
+
+- 不要把这个移动逻辑删掉或改回 `macos/`；`src-tauri/.metadata_never_index` 也要保留。
+- 若用户反馈 Launchpad 出现重复图标，跑 `bash scripts/clean-launchpad.sh` 清理残留注册。
+- build.sh 开头 `unset npm_config_prefix` 别删：外部环境设了这个变量时 nvm 会让脚本在 `set -e` 下直接退出。

@@ -8,8 +8,15 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# nvm 与 externally 设置的 npm_config_prefix 冲突会直接退出（set -e 下尤甚），
+# 与 tauri.conf.json 的 beforeBuildCommand 保持一致，先清掉。
+unset npm_config_prefix || true
 PROJECT="卓动悦听"
 BUNDLE_DIR="src-tauri/target/release/bundle/macos"
+# 中间的 .app 放隐藏 staging，不留在 bundle/macos/：
+# macOS 会把 macos/ 里的 .app 注册进 LaunchServices，Launchpad 就多出一个
+# 点了跳到源码目录的假图标（/Applications 里才是真装的）。
+STAGING_DIR="src-tauri/target/release/bundle/.staging"
 DMG_DIR="src-tauri/target/release/bundle/dmg"
 
 # ---------- 环境初始化 ----------
@@ -56,7 +63,18 @@ echo "📦 [1/2] Tauri 构建 .app..."
 # --bundles app 跳过 Tauri 自带的 create-dmg 流程，只生成 .app
 npx tauri build --bundles app
 
-APP_PATH="$BUNDLE_DIR/$PROJECT.app"
+# 立刻把 Tauri 产出的 .app 移进隐藏目录，并注销旧路径，避免 Launchpad 收进去
+mkdir -p "$STAGING_DIR"
+: > "$STAGING_DIR/.metadata_never_index"
+chflags hidden "$STAGING_DIR" 2>/dev/null || true
+BUILT_APP="$BUNDLE_DIR/$PROJECT.app"
+APP_PATH="$STAGING_DIR/$PROJECT.app"
+if [ -d "$BUILT_APP" ]; then
+  rm -rf "$APP_PATH"
+  mv "$BUILT_APP" "$APP_PATH"
+  lsreg=/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister
+  "$lsreg" -u -f "$BUILT_APP" >/dev/null 2>&1 || true
+fi
 if [ ! -d "$APP_PATH" ]; then
   echo "❌ .app 未生成，构建失败"
   exit 1
