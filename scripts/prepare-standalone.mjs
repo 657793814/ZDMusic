@@ -1,4 +1,6 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from "fs";
+import { execFileSync } from "child_process";
+import { tmpdir } from "os";
 import { resolve, join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -27,6 +29,9 @@ if (existsSync(nextStatic)) copyContents(nextStatic, resolve(standalone, ".next"
 const publicDir = resolve(root, "public");
 if (existsSync(publicDir)) copyContents(publicDir, resolve(standalone, "public"));
 
+// AI 深度尚未接入主应用，正式包不携带模型、WASM 和 benchmark 资源。
+rmSync(resolve(standalone, "public/visual/ai-depth"), { recursive: true, force: true });
+
 // Clean up source files (dev artifacts that leaked from next build)
 const keepFiles = new Set(["server.js", "package.json", "node_modules", ".next", "public"]);
 for (const f of readdirSync(standalone)) {
@@ -35,92 +40,66 @@ for (const f of readdirSync(standalone)) {
   }
 }
 
-const { execSync } = await import("child_process");
-
-// ── Step 1: Prune devDependencies from standalone ──
-// `next build --output=standalone` copies the entire node_modules as-is,
-// including devDependencies like typescript, eslint, @tauri-apps/cli, etc.
-// These are NOT needed at runtime and bloat the final .app to ~500MB.
-console.log("Pruning devDependencies from standalone...");
+// bv2mp3 由 chat API 动态执行，无法完全依赖 Next 文件追踪。
+// 在隔离目录只安装它的生产依赖，避免读取 standalone 中的完整项目 manifest，
+// 也避免覆盖 Next 已按运行时追踪好的依赖文件。
+const runtimeDir = mkdtempSync(join(tmpdir(), "zdmusic-bv2mp3-"));
 try {
-  execSync("npm prune --production --no-audit --no-fund --loglevel=error", {
-    cwd: standalone,
-    stdio: "pipe",
-    // prune 需要递归比对整棵依赖树，冷启动时常超过 1 分钟；给足余量避免
-    // 超时后被跳过，导致 devDependencies 被打进 .app（体积多出约 80MB）。
-    timeout: 300_000,
-    shell: "/bin/bash",
+  console.log("正在安装隔离的 bv2mp3 生产依赖...");
+  execFileSync(
+    "npm",
+    [
+      "install",
+      "--prefix", runtimeDir,
+      "--omit=dev",
+      "--no-audit",
+      "--no-fund",
+      "--no-save",
+      "--package-lock=false",
+      "--loglevel=error",
+      "bv2mp3@4.0.0",
+    ],
+    { stdio: "inherit", timeout: 120_000 },
+  );
+
+  const standaloneModules = join(standalone, "node_modules");
+  const runtimeModules = join(runtimeDir, "node_modules");
+  rmSync(join(standaloneModules, "bv2mp3"), { recursive: true, force: true });
+  // 应用直接执行 src/index.js，不需要 npm .bin；同时避免临时符号链接和目录合并差异。
+  rmSync(join(runtimeModules, ".bin"), { recursive: true, force: true });
+  rmSync(join(standaloneModules, ".bin"), { recursive: true, force: true });
+  cpSync(runtimeModules, standaloneModules, {
+    recursive: true,
+    dereference: true,
+    force: false,
+    errorOnExist: false,
   });
-  console.log("✓ devDependencies pruned");
-} catch (e) {
-  console.warn("⚠️  prune failed (continuing):", e.message?.slice(0, 120));
+
+  if (!existsSync(join(standaloneModules, "bv2mp3/src/index.js"))) {
+    throw new Error("bv2mp3 运行文件未正确写入 standalone");
+  }
+  console.log("✓ bv2mp3 生产依赖已隔离安装");
+} finally {
+  rmSync(runtimeDir, { recursive: true, force: true });
 }
 
-// ── Step 2: Copy essential Next.js runtime deps from source node_modules ──
-// Restore any packages that were wrongly pruned or need specific versions.
-// These must be available for the Next.js server to start.
-const RUNTIME_PKGS = [
-  "next", "react", "react-dom", "styled-jsx",
-  "zod", "zustand", "scheduler",
-  "caniuse-lite", "source-map-js", "client-only",
-  "server-only", "tslib", "graceful-fs", "watchpack", "acorn",
-  "sharp", "axios", "openai", "nanoid",
-  "picocolors", "postcss", "lightningcss",
+// 明显的构建期依赖或尚未启用的资源一旦重新出现，立即让构建失败。
+const forbiddenPaths = [
+  "node_modules/typescript",
+  "node_modules/@types",
+  "node_modules/eslint",
+  "node_modules/@typescript-eslint",
+  "node_modules/@tailwindcss",
+  "node_modules/tailwindcss",
+  "node_modules/lightningcss-darwin-arm64",
+  "node_modules/@next/swc-darwin-arm64",
+  "node_modules/@tauri-apps/cli",
+  "node_modules/@tauri-apps/cli-darwin-arm64",
+  "public/visual/ai-depth",
 ];
-const RUNTIME_SCOPED = [
-  ["@next", ["env", "swc-darwin-arm64"]],
-  ["@swc", ["helpers"]],
-  ["@emnapi", ["*"]],
-  ["@tauri-apps", ["api", "plugin-api", "plugin-http"]],
-];
-
-const srcModules = resolve(root, "node_modules");
-
-for (const pkg of RUNTIME_PKGS) {
-  const src = join(srcModules, pkg);
-  const dest = join(standalone, "node_modules", pkg);
-  if (existsSync(src)) {
-    mkdirSync(dirname(dest), { recursive: true });
-    cpSync(src, dest, { recursive: true, force: true });
-  }
-}
-
-for (const [scope, subpkgs] of RUNTIME_SCOPED) {
-  mkdirSync(join(standalone, "node_modules", scope), { recursive: true });
-  for (const sub of subpkgs) {
-    const src = join(srcModules, scope, sub);
-    const dest = join(standalone, "node_modules", scope, sub);
-    if (existsSync(src)) {
-      cpSync(src, dest, { recursive: true, force: true });
-    }
-  }
-}
-
-// ── Step 3: Install bv2mp3 (and its dependencies) from npm ──
-// The local workspace copy of bv2mp3 is a pnpm-linked source-only package
-// without its own node_modules. npm install fetches the publish-ready version
-// with all transitive dependencies included.
-console.log("Installing bv2mp3...");
-try {
-  execSync("npm install bv2mp3@4.0.0 --no-audit --no-fund --loglevel=error", {
-    cwd: standalone,
-    stdio: "pipe",
-    timeout: 120_000,
-    shell: "/bin/bash",
-    maxBuffer: 5 * 1024 * 1024,
-  });
-  const bv2mp3Path = join(standalone, "node_modules/bv2mp3/src/index.js");
-  if (existsSync(bv2mp3Path)) {
-    console.log("✓ bv2mp3 installed");
-  }
-} catch (e) {
-  console.warn("⚠️  bv2mp3 install failed, B站下载功能不可用:", e.message?.slice(0, 120));
-}
-
-// ── Step 4: Remove the huge Anthropic SDK binary if it snuck in ──
-const claudeBinary = join(standalone, "node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64");
-if (existsSync(claudeBinary)) {
-  rmSync(claudeBinary, { recursive: true, force: true });
+const leakedPaths = forbiddenPaths.filter((path) => existsSync(join(standalone, path)));
+if (leakedPaths.length > 0) {
+  throw new Error(`standalone 含有禁止打包的内容: ${leakedPaths.join(", ")}`);
 }
 
 console.log("✓ Standalone bundle ready");
